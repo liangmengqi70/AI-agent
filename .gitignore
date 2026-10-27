@@ -1,0 +1,10 @@
+node_modules/
+.next/
+.env*
+!.env.example
+*.tsbuildinfo
+test-results/
+*.log
+# 开发过程中的临时备份和实验原始数据（报告 latest.md 保留）
+data/jobs/*.backup-*.json
+data/experiments/*.json

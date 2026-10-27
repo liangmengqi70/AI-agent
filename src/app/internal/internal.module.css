@@ -1,0 +1,30 @@
+/* 内部评估页：只给开发者看，样式从简 */
+.page { max-width: 1200px; margin: 0 auto; padding: 28px 24px 80px; display: flex; flex-direction: column; gap: 18px; }
+.head { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+.head h1 { font-size: 22px; }
+.head span { color: var(--muted); font-size: 13px; }
+.tabs { display: flex; gap: 6px; flex-wrap: wrap; }
+.tabs a { border: 1px solid var(--line); background: var(--surface); padding: 7px 16px; border-radius: var(--pill); font-size: 13px; }
+.tabs a.on { background: var(--ink); color: #fff; border-color: var(--ink); }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px 20px; overflow-x: auto; }
+.card h2 { font-size: 15px; margin-bottom: 10px; }
+.card h3 { font-size: 13px; color: var(--muted); margin: 14px 0 6px; }
+.note { color: var(--muted); font-size: 12px; line-height: 1.7; }
+.table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.table th, .table td { text-align: left; padding: 7px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+.table th { color: var(--muted); font-weight: 600; white-space: nowrap; }
+.table td.num, .table th.num { text-align: right; white-space: nowrap; }
+.table a { text-decoration: underline; text-underline-offset: 3px; }
+.actor { font-size: 11px; padding: 1px 7px; border-radius: var(--pill); white-space: nowrap; font-weight: 600; }
+.code { background: var(--soft); color: var(--ink2); }
+.llm { background: var(--warn-bg); color: var(--warn-ink); }
+.tool { background: var(--rec-bg); color: var(--rec-ink); }
+.user { background: var(--ink); color: #fff; }
+.detail { color: var(--muted); font-size: 12px; line-height: 1.6; margin-top: 2px; white-space: pre-wrap; word-break: break-all; }
+.round { border-top: 1px solid var(--line); padding-top: 12px; margin-top: 12px; }
+.round:first-of-type { border-top: 0; margin-top: 0; padding-top: 0; }
+.md h1 { font-size: 18px; margin: 4px 0 10px; }
+.md h2 { font-size: 15px; margin: 18px 0 8px; }
+.md p, .md li { font-size: 13px; line-height: 1.8; }
+.md ul { padding-left: 18px; }
+.bad { color: var(--gate); }

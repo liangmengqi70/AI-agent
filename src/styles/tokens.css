@@ -1,0 +1,20 @@
+/* 设计变量：A · 黑白极简（与 UI原型.html、ResumeIQ 保持一致） */
+:root {
+  --bg: #FAFAFA;
+  --surface: #FFFFFF;
+  --ink: #0A0A0A;
+  --ink2: #333333;
+  --muted: #8A8A8A;
+  --line: #E8E8E8;
+  --soft: #F4F4F4;
+
+  /* 档位与状态 */
+  --rec-bg: #EAF6EE;  --rec-ink: #1E7A3E;   /* 推荐 */
+  --con-bg: #FFF3E0;  --con-ink: #9A5800;   /* 可以考虑 */
+  --warn-bg: #FFF6E5; --warn-ink: #8A5300;  /* 提示 / 证据 */
+  --gate: #E5484D;    --gate-bg: #FFEDED;   /* 人工确认 / 出错 */
+
+  --radius: 12px;
+  --pill: 999px;
+  --font: Arial, "Microsoft YaHei", "PingFang SC", sans-serif;
+}

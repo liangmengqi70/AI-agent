@@ -1,0 +1,61 @@
+/* 通用样式：按钮、卡片、标签、提示条、确认框、入口页头部、步骤条（与 UI原型.html 一致） */
+
+.btn { border: 1px solid var(--line); background: var(--surface); color: var(--ink); padding: 8px 16px; border-radius: var(--pill); font-size: 13px; white-space: nowrap; display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
+.btn:hover { border-color: #BDBDBD; }
+.btn.primary { background: var(--ink); border-color: var(--ink); color: #fff; font-weight: 600; }
+.btn.primary:hover { background: #303030; }
+.btn.lg { padding: 12px 24px; font-size: 15px; }
+.btn.sm { padding: 5px 12px; font-size: 12px; }
+.btn:disabled { opacity: .45; cursor: not-allowed; }
+.link-btn { border: 0; background: none; padding: 0; color: var(--muted); text-decoration: underline; text-underline-offset: 3px; font-size: 13px; }
+
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+.muted { color: var(--muted); }
+
+.tag { display: inline-block; font-size: 11px; padding: 2px 8px; border-radius: var(--pill); font-weight: 600; white-space: nowrap; }
+.tag.rec { background: var(--rec-bg); color: var(--rec-ink); }
+.tag.con { background: var(--con-bg); color: var(--con-ink); }
+.tag.plain { background: var(--soft); color: var(--muted); font-weight: 500; }
+
+/* 字段来源标签 */
+.src { font-size: 11px; padding: 2px 8px; border-radius: var(--pill); white-space: nowrap; font-weight: 600; justify-self: end; }
+.src.resume, .src.default { background: var(--soft); color: var(--muted); }
+.src.ai { background: var(--warn-bg); color: var(--warn-ink); }
+.src.missing { background: var(--gate-bg); color: var(--gate); }
+.src.user, .src.supplement { background: var(--ink); color: #fff; }
+
+/* 提示条 */
+.toast { position: fixed; left: 50%; bottom: 90px; transform: translateX(-50%) translateY(20px); background: var(--ink); color: #fff; padding: 10px 18px; border-radius: var(--pill); font-size: 13px; opacity: 0; transition: .25s; pointer-events: none; z-index: 80; max-width: 90vw; }
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* 确认框 */
+.modal-wrap { position: fixed; inset: 0; background: rgba(0,0,0,.3); display: flex; align-items: center; justify-content: center; z-index: 70; }
+.modal { background: #fff; border-radius: 14px; padding: 24px 26px; width: min(420px, 90vw); box-shadow: 0 20px 50px rgba(0,0,0,.15); }
+.modal h3 { font-size: 18px; }
+.modal p { color: var(--ink2); line-height: 1.7; margin-top: 10px; }
+.modal-a { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
+
+/* 入口页头部 */
+.e-header { height: 72px; padding: 0 48px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #EEE; background: var(--surface); }
+.e-brand { font-size: 22px; font-weight: 700; letter-spacing: -.4px; }
+
+/* 步骤条 */
+.steps { border-bottom: 1px solid #EAEAEA; padding: 22px 24px 20px; background: var(--surface); }
+.steps ol { list-style: none; padding: 0; margin: 0 auto; display: flex; align-items: center; justify-content: center; gap: 16px; }
+.steps li { display: flex; align-items: center; gap: 10px; font-size: 16px; color: #929297; white-space: nowrap; }
+.steps .sn { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; background: #F1F1F3; font-size: 14px; }
+.steps li.cur { color: var(--ink); font-weight: 600; }
+.steps li.cur .sn { background: var(--ink); color: #fff; box-shadow: 0 0 0 5px #E7E7E7; }
+.steps li.fin { color: var(--ink); }
+.steps li.fin .sn { background: var(--ink); color: #fff; }
+.steps .ln { width: 56px; height: 1px; background: #DEDEE0; }
+
+/* 入口页底部操作条 */
+.e-foot { position: sticky; bottom: 0; border-top: 1px solid #E8E8E8; padding: 18px 24px; background: var(--bg); }
+.e-foot > div { width: min(100%, 860px); margin: auto; display: flex; justify-content: space-between; align-items: center; gap: 16px; }
+
+@media (max-width: 760px) {
+  .e-header { padding: 0 20px; }
+  .steps li { font-size: 13px; }
+  .steps .ln { width: 20px; }
+}

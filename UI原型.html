@@ -1,0 +1,1673 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AI Agent 求职管家 · UI 原型</title>
+<style>
+  /* ========== 设计变量（A · 黑白极简，沿用 ResumeIQ） ========== */
+  :root {
+    --bg:#FAFAFA; --surface:#FFFFFF; --ink:#0A0A0A; --ink2:#333; --muted:#8A8A8A; --line:#E8E8E8; --soft:#F4F4F4;
+    --accent:#0A0A0A; --accent-ink:#FFFFFF;
+    --rec-bg:#EAF6EE; --rec-ink:#1E7A3E; --con-bg:#FFF3E0; --con-ink:#9A5800;
+    --warn-bg:#FFF6E5; --warn-ink:#8A5300; --gate:#E5484D; --gate-bg:#FFEDED;
+    --radius:12px; --pill:999px;
+    --font:Arial,"Microsoft YaHei","PingFang SC",sans-serif;
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink); font-family:var(--font); font-size:14px; }
+  button { font:inherit; cursor:pointer; }
+  h1,h2,h3,p { margin:0; }
+  a { color:inherit; text-decoration:none; }
+
+  /* ========== 布局 ========== */
+  .app { display:grid; grid-template-columns:220px 1fr; min-height:100vh; }
+  .nav { position:sticky; top:0; height:100vh; background:var(--surface); border-right:1px solid var(--line); padding:22px 14px; display:flex; flex-direction:column; gap:4px; }
+  .brand { font-size:20px; font-weight:700; padding:0 10px 18px; letter-spacing:-.4px; }
+  .brand small { display:block; font-size:11px; font-weight:400; color:var(--muted); margin-top:4px; letter-spacing:0; }
+  .nav a { display:flex; align-items:center; justify-content:space-between; padding:10px 12px; border-radius:10px; color:#555; }
+  .nav a:hover { background:var(--soft); }
+  .nav a.on { background:var(--ink); color:#fff; font-weight:600; }
+  .nav a.dim { color:#B5B5B5; }
+  .badge { background:var(--gate); color:#fff; font-size:11px; min-width:20px; height:20px; border-radius:10px; display:grid; place-items:center; padding:0 6px; }
+  .persona { margin-top:auto; padding:12px; border:1px solid var(--line); border-radius:var(--radius); color:var(--muted); font-size:12px; line-height:1.6; }
+  .persona b { color:var(--ink); font-size:13px; }
+
+  .main { display:flex; flex-direction:column; min-width:0; }
+  .topbar { position:sticky; top:0; z-index:5; display:flex; align-items:center; gap:14px; padding:16px 28px; border-bottom:1px solid var(--line); background:var(--surface); }
+  .topbar h1 { font-size:20px; letter-spacing:-.3px; }
+  .status { display:inline-flex; align-items:center; gap:8px; padding:6px 12px; border-radius:var(--pill); background:var(--gate-bg); color:var(--gate); font-size:13px; font-weight:600; }
+  .status i { width:8px; height:8px; border-radius:50%; background:var(--gate); }
+  .status.done { background:var(--soft); color:var(--ink2); } .status.done i { background:var(--ink2); }
+  .clock { margin-left:auto; display:flex; align-items:center; gap:12px; color:var(--muted); font-size:13px; }
+  .clock b { color:var(--ink); }
+  .btn { border:1px solid var(--line); background:var(--surface); color:var(--ink); padding:8px 16px; border-radius:var(--pill); font-size:13px; white-space:nowrap; }
+  .btn:hover { border-color:#BDBDBD; }
+  .btn.primary { background:var(--ink); border-color:var(--ink); color:#fff; font-weight:600; }
+  .btn.primary:hover { background:#303030; }
+  .btn.sm { padding:5px 12px; font-size:12px; }
+  .btn:disabled { opacity:.45; cursor:not-allowed; }
+
+  .page { display:none; padding:22px 28px 110px; flex-direction:column; gap:18px; }
+  .page.on { display:flex; }
+  .card { background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); }
+  .card-h { display:flex; align-items:center; gap:10px; padding:16px 20px 0; }
+  .card-h h3 { font-size:15px; }
+  .card-h .sub { color:var(--muted); font-size:12px; }
+  .card-h .right { margin-left:auto; }
+  .card-b { padding:16px 20px 20px; }
+  .grid2 { display:grid; grid-template-columns:1.4fr 1fr; gap:18px; align-items:start; }
+  .muted { color:var(--muted); }
+  .tag { display:inline-block; font-size:11px; padding:2px 8px; border-radius:var(--pill); font-weight:600; white-space:nowrap; }
+  .tag.rec { background:var(--rec-bg); color:var(--rec-ink); }
+  .tag.con { background:var(--con-bg); color:var(--con-ink); }
+  .tag.due { background:var(--gate-bg); color:var(--gate); }
+  .tag.plain { background:var(--soft); color:var(--muted); font-weight:500; }
+  .tag.ink { background:var(--ink); color:#fff; }
+  .note-bar { padding:10px 14px; border-radius:10px; background:var(--soft); color:var(--muted); font-size:12px; }
+
+  /* ========== 总览 ========== */
+  .stepper { display:flex; align-items:center; gap:0; padding:20px; overflow-x:auto; }
+  .step { display:flex; flex-direction:column; align-items:center; gap:8px; min-width:92px; text-align:center; }
+  .step .dot { width:30px; height:30px; border-radius:50%; display:grid; place-items:center; font-size:13px; background:var(--soft); color:var(--muted); }
+  .step.done .dot { background:var(--ink); color:#fff; }
+  .step.now .dot { background:var(--gate); color:#fff; box-shadow:0 0 0 5px var(--gate-bg); }
+  .step .lb { font-size:12px; color:var(--muted); }
+  .step.done .lb, .step.now .lb { color:var(--ink); font-weight:600; }
+  .step .ex { font-size:11px; color:var(--muted); min-height:14px; }
+  .step.now .ex { color:var(--gate); }
+  .bar-link { flex:1; min-width:16px; height:1px; background:var(--line); margin:0 2px 34px; }
+  .bar-link.done { background:var(--ink); }
+
+  .todo { display:flex; align-items:center; gap:14px; padding:14px 0; border-bottom:1px solid var(--line); }
+  .todo:last-child { border-bottom:0; }
+  .todo .ic { width:34px; height:34px; border-radius:10px; display:grid; place-items:center; flex-shrink:0; font-weight:700; }
+  .todo .ic.red { background:var(--gate-bg); color:var(--gate); }
+  .todo .ic.amb { background:var(--warn-bg); color:var(--warn-ink); }
+  .todo .tx { flex:1; line-height:1.5; }
+  .todo .tx b { display:block; }
+  .todo .tx span { color:var(--muted); font-size:12px; }
+
+  .kpis { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; }
+  .kpi { padding:16px 18px; }
+  .kpi .n { font-size:28px; font-weight:700; letter-spacing:-1px; margin-top:6px; }
+  .kpi .l { color:var(--muted); font-size:12px; }
+  .kpi .d { font-size:12px; margin-top:4px; color:var(--muted); }
+  .kpi .d.up { color:var(--rec-ink); }
+
+  .feed { display:flex; flex-direction:column; }
+  .feed-i { display:grid; grid-template-columns:56px 1fr auto; gap:10px; padding:11px 0; border-bottom:1px dashed var(--line); align-items:center; }
+  .feed-i:last-child { border-bottom:0; }
+  .feed-i .dt { color:var(--muted); font-size:12px; }
+
+  .strat-line { display:flex; gap:10px; padding:10px 0; border-bottom:1px dashed var(--line); line-height:1.6; }
+  .strat-line:last-child { border-bottom:0; }
+  .strat-line .k { color:var(--muted); width:84px; flex-shrink:0; font-size:13px; }
+
+  /* ========== 推荐 ========== */
+  .ask { display:flex; align-items:center; gap:16px; padding:14px 18px; border-radius:var(--radius); background:var(--warn-bg); color:var(--warn-ink); }
+  .ask p { flex:1; line-height:1.6; }
+  .ask b { color:var(--ink); }
+  .ask .btns { display:flex; gap:8px; flex-shrink:0; }
+  .rec-area { display:grid; grid-template-columns:minmax(300px,380px) 1fr; gap:16px; align-items:start; }
+  .list-head { display:flex; align-items:center; gap:10px; padding:14px 16px; border-bottom:1px solid var(--line); font-size:13px; color:var(--muted); }
+  .list-head label { display:flex; align-items:center; gap:6px; color:var(--ink); }
+  .list-head .sum { margin-left:auto; }
+  .group-title { padding:12px 16px 6px; font-size:12px; color:var(--muted); }
+  .item { display:flex; gap:10px; padding:12px 16px; border-left:3px solid transparent; cursor:pointer; }
+  .item:hover { background:var(--soft); }
+  .item.on { background:var(--soft); border-left-color:var(--ink); }
+  .item.skipped { opacity:.45; }
+  .item input { margin-top:3px; accent-color:var(--ink); }
+  .item .t { font-weight:600; }
+  .item .m { color:var(--muted); font-size:12px; margin-top:4px; }
+  .item .tags { display:flex; gap:6px; margin-top:8px; flex-wrap:wrap; }
+  .folded { display:block; width:100%; text-align:left; padding:14px 16px; border:0; border-top:1px solid var(--line); background:transparent; color:var(--muted); font-size:13px; }
+  .filtered { display:none; padding:0 16px 14px; font-size:12px; color:var(--muted); line-height:1.8; }
+  .filtered.show { display:block; }
+  .detail { padding:22px 24px; position:sticky; top:80px; }
+  .d-head { display:flex; align-items:flex-start; gap:12px; }
+  .d-head > div { flex:1; min-width:0; }
+  .d-head h2 { font-size:22px; line-height:1.3; letter-spacing:-.3px; }
+  .d-head .m { color:var(--muted); margin-top:6px; }
+  .d-head .tag { flex:none; font-size:12px; padding:4px 10px; }
+  .reason { margin-top:16px; padding:12px 14px; background:var(--soft); border-radius:8px; line-height:1.7; }
+  .sec { margin-top:20px; }
+  .sec h3 { font-size:13px; color:var(--muted); font-weight:600; margin-bottom:8px; }
+  .req { display:grid; grid-template-columns:22px 1fr; gap:4px 8px; padding:10px 0; border-bottom:1px dashed var(--line); }
+  .req:last-child { border-bottom:0; }
+  .req .ic { font-weight:700; text-align:center; }
+  .ic.ok { color:var(--rec-ink); } .ic.part { color:var(--con-ink); } .ic.no { color:var(--gate); }
+  .req .ev { grid-column:2; color:var(--muted); font-size:12px; line-height:1.6; }
+  .req .kind { font-size:11px; color:var(--muted); margin-left:6px; }
+  .risk { padding:10px 14px; border-radius:8px; background:var(--warn-bg); color:var(--warn-ink); line-height:1.6; font-size:13px; }
+  .d-actions { display:flex; gap:10px; margin-top:22px; align-items:center; }
+  .d-actions .link { margin-right:auto; color:var(--muted); font-size:13px; text-decoration:underline; text-underline-offset:3px; background:none; border:0; padding:0; }
+  .skipbox { display:none; margin-top:12px; gap:8px; flex-wrap:wrap; align-items:center; }
+  .skipchat { display:none; margin-top:16px; padding:14px; border:1px solid var(--line); border-radius:12px; background:#FCFCFC; flex-direction:column; gap:10px; }
+  .skipchat.show { display:flex; }
+  .bubble { max-width:85%; padding:10px 14px; border-radius:14px; line-height:1.6; font-size:13px; }
+  .bubble.agent { align-self:flex-start; background:var(--soft); color:var(--ink2); border-top-left-radius:4px; }
+  .bubble.me { align-self:flex-end; background:var(--ink); color:#fff; border-top-right-radius:4px; }
+  .skipchat .quick { display:flex; gap:6px; flex-wrap:wrap; }
+  .chat-input { display:flex; gap:8px; align-items:center; border:1px solid var(--line); border-radius:999px; padding:4px 4px 4px 14px; background:#fff; }
+  .chat-input input { flex:1; border:0; outline:none; font:inherit; font-size:13px; background:transparent; min-width:0; }
+  .chat-input:focus-within { border-color:#9A9A9A; }
+  .skipbox.show { display:flex; }
+  .chip { border:1px solid var(--line); background:var(--surface); border-radius:var(--pill); padding:5px 12px; font-size:12px; }
+  .chip:hover { border-color:#BDBDBD; }
+
+  /* ========== 复盘 ========== */
+  .sum-row { display:grid; grid-template-columns:repeat(5,1fr); gap:12px; }
+  .funnel { display:flex; flex-direction:column; gap:10px; }
+  .f-row { display:grid; grid-template-columns:96px 1fr 70px; gap:12px; align-items:center; font-size:13px; }
+  .f-bar { height:22px; background:var(--soft); border-radius:6px; overflow:hidden; }
+  .f-bar i { display:block; height:100%; background:var(--ink); border-radius:6px; }
+  .f-row .v { text-align:right; color:var(--muted); }
+  .grp { margin-top:4px; }
+  .grp h4 { margin:14px 0 8px; font-size:12px; color:var(--muted); font-weight:600; }
+  .g-row { display:grid; grid-template-columns:110px 1fr 120px; gap:12px; align-items:center; padding:6px 0; font-size:13px; }
+  .g-bar { height:10px; background:var(--soft); border-radius:5px; overflow:hidden; }
+  .g-bar i { display:block; height:100%; background:var(--ink); }
+  .g-bar.thin i { background:repeating-linear-gradient(45deg,#BDBDBD 0 4px,#E0E0E0 4px 8px); }
+  .g-row .v { color:var(--muted); font-size:12px; text-align:right; }
+  .g-row .v em { font-style:normal; color:var(--warn-ink); }
+
+  .inv { display:flex; flex-direction:column; }
+  .inv-i { display:grid; grid-template-columns:28px 1fr; gap:12px; position:relative; padding-bottom:16px; }
+  .inv-i::before { content:""; position:absolute; left:13px; top:28px; bottom:0; width:1px; background:var(--line); }
+  .inv-i:last-child::before { display:none; }
+  .inv-i .n { width:28px; height:28px; border-radius:50%; background:var(--soft); display:grid; place-items:center; font-size:12px; font-weight:700; }
+  .inv-i .think { line-height:1.6; }
+  .inv-i .tool { display:inline-block; margin-top:6px; font-family:Consolas,"Courier New",monospace; font-size:12px; background:var(--soft); padding:3px 8px; border-radius:6px; color:var(--ink2); }
+  .inv-i .found { margin-top:6px; color:var(--muted); font-size:13px; line-height:1.6; }
+  .inv-i .found b { color:var(--ink); font-weight:600; }
+  .inv-more { display:none; } .inv.open .inv-more { display:block; }
+
+  .prop { border:1px solid var(--line); border-radius:var(--radius); padding:16px 18px; display:flex; flex-direction:column; gap:10px; }
+  .prop.accepted { border-color:var(--ink); box-shadow:inset 3px 0 0 var(--ink); }
+  .prop.rejected { opacity:.5; }
+  .prop-h { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+  .prop-h b { font-size:15px; }
+  .prop .change { display:flex; align-items:center; gap:10px; font-size:13px; padding:10px 12px; background:var(--soft); border-radius:8px; flex-wrap:wrap; }
+  .prop .change s { color:var(--muted); }
+  .prop .ev { color:var(--muted); font-size:13px; line-height:1.6; }
+  .prop .guard { font-size:12px; color:var(--muted); }
+  .prop .guard.ok::before { content:"✓ "; color:var(--rec-ink); font-weight:700; }
+  .prop .guard.warn::before { content:"! "; color:var(--warn-ink); font-weight:700; }
+  .prop-a { display:flex; gap:8px; justify-content:flex-end; }
+  .conf { font-size:11px; padding:2px 8px; border-radius:var(--pill); border:1px solid var(--line); color:var(--ink2); }
+
+  /* 复盘：结论卡、证据、调整前后 */
+  .verdict { background:var(--ink); color:#fff; border-radius:var(--radius); padding:26px 28px; }
+  .verdict .v-label { font-size:12px; color:#A8A8A8; letter-spacing:.5px; }
+  .verdict h2 { font-size:24px; line-height:1.4; letter-spacing:-.4px; margin-top:10px; }
+  .verdict p { color:#CFCFCF; line-height:1.7; margin-top:8px; }
+  .v-stats { display:grid; grid-template-columns:repeat(5,1fr); gap:12px; margin-top:22px; padding-top:18px; border-top:1px solid #2E2E2E; }
+  .v-stats b { display:block; font-size:28px; letter-spacing:-1px; }
+  .v-stats span { color:#A8A8A8; font-size:12px; }
+  .str { font-size:12px; padding:3px 10px; border-radius:var(--pill); font-weight:600; }
+  .str.high { background:var(--rec-bg); color:var(--rec-ink); }
+  .str.mid { background:var(--con-bg); color:var(--con-ink); }
+  .str.low { background:var(--soft); color:#666; }
+  .str.you { background:var(--ink); color:#fff; }
+  .evi { background:#FFF8EC; border-left:3px solid #E8A33D; border-radius:8px; padding:12px 16px; }
+  .evi-t { font-size:12px; font-weight:700; color:#8A5300; }
+  .evi ul { margin:6px 0 0; padding-left:18px; line-height:1.9; color:var(--ink); }
+  .evi .hl { color:var(--gate); }
+  .chg { display:grid; grid-template-columns:1fr auto 1fr; gap:12px; align-items:stretch; }
+  .chg > div { border:1px solid var(--line); border-radius:8px; padding:10px 12px; font-size:13px; line-height:1.6; }
+  .chg > div span { display:block; font-size:11px; color:var(--muted); margin-bottom:2px; }
+  .chg > div.to { border-color:var(--ink); font-weight:600; }
+  .chg > i { font-style:normal; align-self:center; color:var(--muted); }
+  .tip { font-size:13px; color:var(--ink2); }
+  .tip a { text-decoration:underline; text-underline-offset:3px; }
+  .f-row.bad span:first-child, .g-row.bad span:first-child { color:var(--gate); font-weight:600; }
+  .f-row.bad .f-bar i, .g-row.bad .g-bar i { background:var(--gate); }
+  .inv-i .think b { font-weight:600; }
+
+  .done-chip { display:inline-flex; align-items:center; gap:6px; padding:6px 14px; border-radius:var(--pill); font-size:12px; font-weight:600; }
+  .done-chip.yes { background:var(--ink); color:#fff; }
+  .done-chip.no { background:var(--soft); color:#666; }
+  .link-undo { border:0; background:none; color:var(--muted); text-decoration:underline; text-underline-offset:3px; }
+  .prop.rejected { opacity:.6; }
+  .finding { display:grid; grid-template-columns:52px 1fr auto; gap:14px; align-items:start; padding:14px 0; border-bottom:1px dashed var(--line); }
+  .finding:last-child { border-bottom:0; }
+  .finding b { font-size:15px; }
+  .finding p { color:var(--muted); font-size:13px; line-height:1.6; margin-top:4px; }
+  .ft { font-size:12px; font-weight:700; padding:3px 0; border-radius:var(--pill); text-align:center; }
+  .ft.bad { background:var(--gate-bg); color:var(--gate); }
+  .ft.good { background:var(--rec-bg); color:var(--rec-ink); }
+  .ft.pref { background:var(--soft); color:#555; }
+  .fl { font-size:12px; color:var(--muted); white-space:nowrap; padding-top:3px; }
+
+  .proto-switch { position:fixed; right:16px; bottom:82px; z-index:50; display:flex; align-items:center; gap:6px; padding:6px 8px 6px 12px; background:#fff; border:1px dashed #BDBDBD; border-radius:999px; font-size:12px; color:var(--muted); box-shadow:0 4px 14px rgba(0,0,0,.06); }
+  .proto-switch button { border:1px solid var(--line); background:#fff; border-radius:999px; padding:4px 10px; font-size:12px; }
+  .proto-switch button.on { background:var(--ink); color:#fff; border-color:var(--ink); }
+  .tag.new { background:var(--gate); color:#fff; }
+  .state-card { padding:48px 24px; text-align:center; color:var(--muted); line-height:1.8; }
+  .state-card b { color:var(--ink); font-size:16px; display:block; margin-bottom:6px; }
+  .state-card .btn { margin-top:14px; }
+  .step.run .dot { background:var(--ink); color:#fff; animation:pulse 1s ease-in-out infinite; }
+  @keyframes pulse { 50% { box-shadow:0 0 0 6px #E7E7E7; } }
+  .clock .btn:disabled { opacity:.4; cursor:not-allowed; }
+  .modal-wrap { position:fixed; inset:0; background:rgba(0,0,0,.3); display:none; align-items:center; justify-content:center; z-index:60; }
+  .modal-wrap.on { display:flex; }
+  .modal { background:#fff; border-radius:14px; padding:24px 26px; width:min(420px, 90vw); box-shadow:0 20px 50px rgba(0,0,0,.15); }
+  .modal h3 { font-size:18px; }
+  .modal p { color:var(--ink2); line-height:1.7; margin-top:10px; }
+  .modal-a { display:flex; justify-content:flex-end; gap:10px; margin-top:20px; }
+  /* 底部操作条 */
+  .actionbar { position:fixed; left:220px; right:0; bottom:0; display:none; align-items:center; gap:16px; padding:14px 28px; background:var(--surface); border-top:1px solid var(--line); z-index:6; }
+  .actionbar.on { display:flex; }
+  .actionbar .note { color:var(--muted); font-size:13px; }
+  .actionbar .btn.primary { margin-left:auto; padding:10px 22px; font-size:14px; }
+
+  .placeholder { padding:80px 20px; text-align:center; color:var(--muted); line-height:1.8; }
+  .toast { position:fixed; left:50%; bottom:90px; transform:translateX(-50%) translateY(20px); background:var(--ink); color:#fff; padding:10px 18px; border-radius:var(--pill); font-size:13px; opacity:0; transition:.25s; pointer-events:none; z-index:30; }
+  .toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
+
+  /* ========== 入口页（首页 / 上传 / 确认）========== */
+  .entry { display:none; min-height:100vh; flex-direction:column; }
+  .entry.on { display:flex; }
+  .app.off { display:none; }
+  .e-header { height:72px; padding:0 48px; display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid #EEE; background:var(--surface); }
+  .e-header .brand { padding:0; font-size:22px; }
+  .e-page { display:none; flex:1; flex-direction:column; }
+  .e-page.on { display:flex; }
+
+  .hero { text-align:center; padding:96px 24px 48px; }
+  .eyebrow { display:inline-flex; align-items:center; gap:10px; border:1px solid var(--line); border-radius:var(--pill); padding:9px 18px; color:var(--muted); font-size:14px; background:var(--surface); }
+  .eyebrow i { width:7px; height:7px; border-radius:50%; background:#6D6D6D; }
+  .hero h1 { font-size:clamp(40px,4.4vw,64px); line-height:1.22; letter-spacing:-2px; margin-top:40px; font-weight:750; }
+  .hero p { font-size:19px; line-height:1.8; color:var(--muted); margin-top:24px; }
+  .hero .cta { margin-top:44px; min-height:64px; padding:0 36px; font-size:18px; border-radius:var(--pill); background:var(--ink); color:#fff; border:0; font-weight:600; display:inline-flex; align-items:center; gap:16px; }
+  .hero .cta span { font-size:24px; font-weight:400; transition:transform .2s; }
+  .hero .cta:hover span { transform:translateX(5px); }
+  .hero .hint { margin-top:18px; color:var(--muted); font-size:14px; }
+  .values { display:grid; grid-template-columns:repeat(3,1fr); gap:16px; width:min(100% - 48px, 1000px); margin:0 auto; }
+  .value { padding:22px 24px; }
+  .value b { font-size:16px; display:block; }
+  .value p { color:var(--muted); line-height:1.7; margin-top:8px; font-size:13px; }
+  .demo { width:min(100% - 48px, 1000px); margin:56px auto 0; }
+  .demo h2 { font-size:18px; }
+  .demo .sub { color:var(--muted); margin-top:6px; font-size:13px; }
+  .personas { display:grid; grid-template-columns:repeat(3,1fr); gap:16px; margin-top:18px; }
+  .pcard { padding:20px; display:flex; flex-direction:column; gap:10px; }
+  .pcard .av { width:44px; height:44px; border-radius:50%; background:var(--soft); display:grid; place-items:center; font-weight:700; font-size:18px; }
+  .pcard b { font-size:16px; }
+  .pcard p { color:var(--muted); line-height:1.7; font-size:13px; }
+  .pcard .btn { align-self:flex-start; margin-top:4px; }
+  .privacy { text-align:center; color:#77818D; font-size:13px; line-height:1.7; padding:48px 24px 40px; }
+
+  .steps { border-bottom:1px solid #EAEAEA; padding:22px 24px 20px; background:var(--surface); }
+  .steps ol { list-style:none; padding:0; margin:0 auto; display:flex; align-items:center; justify-content:center; gap:16px; }
+  .steps li { display:flex; align-items:center; gap:10px; font-size:16px; color:#929297; white-space:nowrap; }
+  .steps .sn { width:30px; height:30px; border-radius:50%; display:grid; place-items:center; background:#F1F1F3; font-size:14px; }
+  .steps li.cur { color:var(--ink); font-weight:600; }
+  .steps li.cur .sn { background:var(--ink); color:#fff; box-shadow:0 0 0 5px #E7E7E7; }
+  .steps li.fin { color:var(--ink); } .steps li.fin .sn { background:var(--ink); color:#fff; }
+  .steps .ln { width:56px; height:1px; background:#DEDEE0; }
+
+  .upload-main { width:min(100% - 48px, 760px); margin:0 auto; text-align:center; padding:64px 0 120px; }
+  .upload-main h1 { font-size:38px; letter-spacing:-1.2px; }
+  .upload-main > p { color:#87878E; font-size:17px; line-height:1.7; margin-top:16px; }
+  .drop { margin-top:40px; min-height:300px; border:2px dashed #E3E3E6; border-radius:24px; background:var(--surface); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:12px; color:#888890; font-size:16px; cursor:pointer; transition:.15s; }
+  .drop:hover, .drop.is-dragging { border-color:#A0A0A5; background:#F7F7F7; }
+  .upload-err { min-height:22px; margin-top:12px; color:var(--gate); font-size:13px; }
+  .drop .upi { width:72px; height:72px; border-radius:20px; background:#F4F4F5; display:grid; place-items:center; font-size:28px; color:#7B7B82; margin-bottom:8px; }
+  .drop strong { color:var(--ink); font-size:18px; }
+  .parse { display:none; margin-top:40px; text-align:left; padding:24px 28px; }
+  .parse.show { display:block; }
+  .parse h3 { font-size:16px; margin-bottom:14px; }
+  .pstep { display:flex; align-items:center; gap:12px; padding:10px 0; color:var(--muted); }
+  .pstep .s { width:22px; height:22px; border-radius:50%; border:1.5px solid var(--line); display:grid; place-items:center; font-size:12px; flex-shrink:0; }
+  .pstep.run { color:var(--ink); } .pstep.run .s { border-color:var(--ink); border-top-color:transparent; animation:spin 1s linear infinite; }
+  .pstep.ok { color:var(--ink); } .pstep.ok .s { background:var(--ink); border-color:var(--ink); color:#fff; }
+  .pstep em { margin-left:auto; font-style:normal; font-size:12px; color:var(--muted); }
+  @keyframes spin { to { transform:rotate(360deg); } }
+  .e-foot { position:sticky; bottom:0; border-top:1px solid #E8E8E8; padding:18px 24px; background:var(--bg); }
+  .e-foot > div { width:min(100%, 860px); margin:auto; display:flex; justify-content:space-between; align-items:center; gap:16px; }
+  .e-foot .btn { padding:12px 24px; font-size:15px; }
+
+  .confirm-main { width:min(100% - 48px, 860px); margin:0 auto; padding:36px 0 40px; display:flex; flex-direction:column; gap:18px; }
+  .confirm-main > h1 { font-size:30px; letter-spacing:-1px; }
+  .legend { color:var(--muted); font-size:14px; }
+  .src { font-size:11px; padding:2px 8px; border-radius:var(--pill); white-space:nowrap; font-weight:600; }
+  .src.resume { background:var(--soft); color:var(--muted); }
+  .src.ai { background:var(--warn-bg); color:var(--warn-ink); }
+  .src.miss { background:var(--gate-bg); color:var(--gate); }
+  .src.user { background:var(--ink); color:#fff; }
+  .fsec { padding:6px 22px 14px; }
+  .fsec > h3 { font-size:16px; padding:16px 0 4px; }
+  .fsec > .d { color:var(--muted); font-size:12px; margin-bottom:6px; }
+  .field { display:grid; grid-template-columns:120px 1fr auto; gap:14px; align-items:center; padding:13px 0; border-bottom:1px dashed var(--line); }
+  .field:last-child { border-bottom:0; }
+  .field > label { color:var(--ink2); font-size:13px; }
+  .field .why { grid-column:2 / 4; color:var(--warn-ink); font-size:12px; margin-top:-6px; }
+  .field.err .why { color:var(--gate); }
+  .field.err input[type=number] { border-color:var(--gate); }
+  .val { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+  .inp { height:36px; border:1px solid var(--line); border-radius:10px; padding:0 12px; font:inherit; background:var(--surface); color:var(--ink); }
+  .inp.w60 { width:64px; } .inp.w200 { width:220px; }
+  .tok { display:inline-flex; align-items:center; gap:6px; padding:5px 10px; border:1px solid var(--line); border-radius:var(--pill); font-size:13px; background:var(--surface); }
+  .tok i { font-style:normal; color:var(--muted); cursor:pointer; }
+  .tok.add { border-style:dashed; color:var(--muted); cursor:pointer; }
+  .lv { color:var(--muted); font-size:12px; min-width:48px; }
+  .seg { display:inline-flex; border:1px solid var(--line); border-radius:var(--pill); overflow:hidden; }
+  .seg button { border:0; background:var(--surface); padding:7px 16px; font-size:13px; }
+  .seg button.on { background:var(--ink); color:#fff; }
+  .exp { display:grid; gap:8px; }
+  .exp div { padding:10px 12px; border:1px solid var(--line); border-radius:10px; font-size:13px; line-height:1.6; }
+  .exp span { color:var(--muted); font-size:12px; }
+  textarea.inp { width:100%; height:84px; padding:10px 12px; resize:vertical; line-height:1.6; }
+  .parsed { display:none; margin-top:10px; padding:12px 14px; border-radius:10px; background:var(--warn-bg); color:var(--warn-ink); font-size:13px; line-height:1.7; }
+  .parsed.show { display:block; }
+  .parsed b { color:var(--ink); }
+
+  /* ========== 投递看板 ========== */
+  .board-tools { display:flex; align-items:center; gap:12px; }
+  .board { display:grid; grid-template-columns:repeat(6, minmax(190px, 1fr)); gap:12px; overflow-x:auto; padding-bottom:8px; align-items:start; }
+  .col { background:#F2F2F2; border-radius:var(--radius); padding:10px; min-height:220px; }
+  .col-h { display:flex; align-items:center; gap:8px; padding:4px 4px 10px; font-weight:600; font-size:13px; }
+  .col-h .c { margin-left:auto; color:var(--muted); font-weight:400; }
+  .bcard { background:var(--surface); border:1px solid var(--line); border-radius:10px; padding:12px; margin-bottom:8px; cursor:pointer; }
+  .bcard:hover { border-color:#BDBDBD; }
+  .bcard .t { font-weight:600; font-size:13px; }
+  .bcard .m { color:var(--muted); font-size:12px; margin-top:3px; }
+  .bcard .e { font-size:12px; margin-top:8px; line-height:1.5; }
+  .bcard .tags { display:flex; gap:6px; margin-top:8px; flex-wrap:wrap; }
+  .col .empty { color:var(--muted); font-size:12px; padding:20px 6px; text-align:center; line-height:1.6; }
+  .overlay { position:fixed; inset:0; background:rgba(0,0,0,.25); opacity:0; pointer-events:none; transition:.2s; z-index:40; }
+  .overlay.on { opacity:1; pointer-events:auto; }
+  .drawer { position:fixed; top:0; right:0; bottom:0; width:min(440px, 100%); background:var(--surface); z-index:41; transform:translateX(100%); transition:.25s; padding:24px; overflow-y:auto; border-left:1px solid var(--line); }
+  .drawer.on { transform:none; }
+  .drawer .x { position:absolute; top:16px; right:16px; border:0; background:var(--soft); width:32px; height:32px; border-radius:50%; font-size:16px; }
+  .drawer h2 { font-size:20px; padding-right:40px; }
+  .tl { margin-top:18px; }
+  .tl-i { display:grid; grid-template-columns:14px 1fr; gap:12px; position:relative; padding-bottom:18px; }
+  .tl-i::before { content:""; position:absolute; left:6px; top:16px; bottom:0; width:1px; background:var(--line); }
+  .tl-i:last-child::before { display:none; }
+  .tl-i .p { width:13px; height:13px; border-radius:50%; background:var(--ink); margin-top:3px; }
+  .tl-i.grey .p { background:#C9C9C9; }
+  .tl-i .d { color:var(--muted); font-size:12px; }
+  .tl-i .txt { line-height:1.6; }
+  .tl-i .msg { margin-top:6px; padding:10px 12px; background:var(--soft); border-radius:8px; font-size:13px; color:var(--ink2); line-height:1.6; }
+
+  /* ========== 策略 ========== */
+  .param { display:grid; grid-template-columns:130px 1fr auto; gap:14px; padding:12px 0; border-bottom:1px dashed var(--line); align-items:center; }
+  .param:last-child { border-bottom:0; }
+  .param .k { color:var(--muted); font-size:13px; }
+  .ver { display:grid; grid-template-columns:64px 1fr; gap:16px; padding:16px 0; border-bottom:1px solid var(--line); }
+  .ver:last-child { border-bottom:0; }
+  .ver .vn { font-size:22px; font-weight:700; letter-spacing:-.5px; }
+  .ver .vd { color:var(--muted); font-size:12px; }
+  .ver ul { margin:8px 0 0; padding-left:18px; line-height:1.8; color:var(--ink2); font-size:13px; }
+  .ver ul .rej { color:var(--muted); text-decoration:line-through; }
+  .bars { display:flex; align-items:flex-end; gap:28px; height:180px; padding:10px 10px 0; border-bottom:1px solid var(--line); }
+  .bars .b { flex:1; max-width:90px; display:flex; flex-direction:column; align-items:center; gap:6px; height:100%; justify-content:flex-end; }
+  .bars .b i { width:100%; background:var(--ink); border-radius:6px 6px 0 0; }
+  .bars .b.pending i { background:repeating-linear-gradient(45deg,#D5D5D5 0 5px,#EBEBEB 5px 10px); }
+  .bars .b span { font-size:12px; color:var(--muted); }
+  .bars .b b { font-size:13px; }
+  .bars-x { display:flex; gap:28px; padding:8px 10px 0; }
+  .bars-x span { flex:1; max-width:90px; text-align:center; font-size:12px; color:var(--muted); }
+
+  /* ========== Agent 日志 ========== */
+  .tabs { display:inline-flex; gap:6px; }
+  .tabs button { border:1px solid var(--line); background:var(--surface); padding:7px 16px; border-radius:var(--pill); font-size:13px; }
+  .tabs button.on { background:var(--ink); color:#fff; border-color:var(--ink); }
+  .log-i { display:grid; grid-template-columns:150px 64px 1fr; gap:14px; padding:14px 20px; border-bottom:1px solid var(--line); align-items:start; cursor:pointer; }
+  .log-i:hover { background:#FCFCFC; }
+  .log-i:last-child { border-bottom:0; }
+  .log-i .tm { color:var(--muted); font-size:12px; padding-top:2px; }
+  .actor { font-size:11px; padding:2px 8px; border-radius:var(--pill); font-weight:600; justify-self:start; }
+  .actor.code { border:1px solid var(--ink); color:var(--ink); }
+  .actor.llm { background:var(--rec-bg); color:var(--rec-ink); }
+  .actor.tool { background:var(--con-bg); color:var(--con-ink); }
+  .actor.you { background:var(--gate-bg); color:var(--gate); }
+  .log-i .ti { font-weight:600; }
+  .log-i .su { color:var(--muted); font-size:13px; margin-top:3px; line-height:1.6; }
+  .log-i .co { color:var(--muted); font-size:12px; text-align:right; white-space:nowrap; }
+  .log-i .more { display:none; grid-column:3 / 4; margin-top:8px; padding:12px 14px; background:var(--soft); border-radius:8px; font-size:12px; line-height:1.8; color:var(--ink2); }
+  .log-i.open .more { display:block; }
+  .log-sum { display:flex; gap:24px; color:var(--muted); font-size:13px; }
+  .log-sum b { color:var(--ink); }
+
+  /* ========== 画像 ========== */
+  .pf { display:grid; grid-template-columns:120px 1fr auto; gap:14px; padding:12px 0; border-bottom:1px dashed var(--line); align-items:center; }
+  .pf:last-child { border-bottom:0; }
+  .pf .k { color:var(--muted); font-size:13px; }
+
+  @media (max-width: 960px) {
+    .values, .personas { grid-template-columns:1fr; }
+    .field, .pf, .param { grid-template-columns:1fr; }
+    .log-i { grid-template-columns:1fr; }
+    .e-header { padding:0 20px; }
+  }
+  @media (max-width: 960px) {
+    .app { grid-template-columns:1fr; }
+    .nav { display:none; }
+    .rec-area, .grid2 { grid-template-columns:1fr; }
+    .kpis { grid-template-columns:repeat(2,1fr); }
+    .sum-row { grid-template-columns:repeat(2,1fr); }
+    .actionbar { left:0; }
+    .ask { flex-direction:column; align-items:flex-start; }
+    .detail { position:static; }
+  }
+</style>
+</head>
+<body>
+<!-- ===================== 入口：首页 / 上传 / 确认（无侧边栏） ===================== -->
+<div class="entry" id="entry">
+  <header class="e-header">
+    <a class="brand" href="#home">AI Agent 求职管家</a>
+    <button class="btn primary" onclick="toast('第二版开放：使用 ResumeIQ 账号登录，保存进度')">登录保存进度</button>
+  </header>
+
+  <!-- 1. 首页 -->
+  <section class="e-page" id="e-home">
+    <div class="hero">
+      <span class="eyebrow"><i></i>AI Agent · 实习 / 校招</span>
+      <h1>少一点海投，<br>多一点有把握的投递</h1>
+      <p>上传简历，AI Agent 求职管家帮你筛岗位、管进度，<br>并在每一轮之后告诉你哪里出了问题、下一轮怎么调。</p>
+      <button class="cta" onclick="go('upload')">上传简历，开始求职 <span>→</span></button>
+      <div class="hint">支持 PDF、DOCX · 无需注册</div>
+    </div>
+    <div class="values">
+      <div class="card value"><b>推荐有依据</b><p>每个岗位分为"推荐 / 可以考虑 / 不推荐"，逐条说明满足了哪些要求、缺了什么，不打分。</p></div>
+      <div class="card value"><b>进度不再乱</b><p>投递、笔试、面试集中在一张看板上，临近截止的岗位优先提醒。</p></div>
+      <div class="card value"><b>越投越准</b><p>每轮结束后 Agent 分析结果、找出原因，提出策略调整，你确认后生效。</p></div>
+    </div>
+    <div class="demo">
+      <h2>没有简历？先看看示例</h2>
+      <p class="sub">以下人物均为虚构，第 1 轮已完成，进入即可看到推荐、投递记录和复盘。</p>
+      <div class="personas">
+        <div class="card pcard"><div class="av">周</div><b>小周 · 技术实习</b><p>计算机 · 大三 · 2027 届<br>后端 / 数据开发日常实习 · 北京、上海</p><button class="btn primary sm" onclick="enterDemo('小周')">以小周身份体验</button></div>
+        <div class="card pcard"><div class="av">陈</div><b>小陈 · 跨专业转产品</b><p>信息管理 · 大四 · 2026 届<br>产品经理 / AI 产品校招 · 杭州、上海</p><button class="btn primary sm" onclick="enterDemo('小陈')">以小陈身份体验</button></div>
+        <div class="card pcard"><div class="av">许</div><b>小许 · 运营校招</b><p>汉语言文学 · 大四 · 2026 届<br>新媒体 / 内容运营校招 + 暑期实习 · 广州、深圳</p><button class="btn primary sm" onclick="enterDemo('小许')">以小许身份体验</button></div>
+      </div>
+    </div>
+    <div class="privacy">你上传的简历只与当前浏览器关联，7 天后自动删除；更换设备或清除浏览器数据后进度不保留。</div>
+  </section>
+
+  <!-- 2. 简历上传 -->
+  <section class="e-page" id="e-upload">
+    <div class="steps"><ol>
+      <li class="cur"><span class="sn">1</span>上传简历</li><span class="ln"></span>
+      <li><span class="sn">2</span>确认画像与偏好</li><span class="ln"></span>
+      <li><span class="sn">3</span>开始第 1 轮</li>
+    </ol></div>
+    <div class="upload-main">
+      <h1>上传你的简历</h1>
+      <p>AI Agent 求职管家会读取你的简历，整理出你的画像，并推测你可能的求职意向。<br>推测的内容都需要你确认后才会生效。</p>
+      <input type="file" id="fileInput" accept=".pdf,.docx,.doc" style="display:none" onchange="pickFile(this.files[0]); this.value=''">
+      <div class="drop" id="drop" onclick="document.getElementById('fileInput').click()">
+        <div class="upi">↑</div>
+        <strong>拖拽文件到这里，或<u>点击选择文件</u></strong>
+        <span>支持 PDF、DOCX，10MB 以内 · 扫描版 PDF 会自动识别文字，耗时稍长</span>
+      </div>
+      <p class="upload-err" id="uploadErr"></p>
+      <div class="card parse" id="parse">
+        <h3 id="parseTitle">正在读取：</h3>
+        <div class="pstep" data-i="0"><span class="s"></span>提取文本<em>程序</em></div>
+        <div class="pstep" data-i="1"><span class="s"></span>理解简历，整理画像并推测意向<em>大模型</em></div>
+        <div class="pstep" data-i="2"><span class="s"></span>检查信息是否完整<em>程序</em></div>
+      </div>
+    </div>
+    <div class="e-foot"><div>
+      <a class="btn" href="#home">返回</a>
+      <button class="btn primary" id="toConfirm" disabled onclick="editMode = false; go('confirm')">下一步</button>
+    </div></div>
+  </section>
+
+  <!-- 3. 画像与偏好确认 -->
+  <section class="e-page" id="e-confirm">
+    <div class="steps" id="confirmSteps"><ol>
+      <li class="fin"><span class="sn">✓</span>上传简历</li><span class="ln"></span>
+      <li class="cur"><span class="sn">2</span>确认画像与偏好</li><span class="ln"></span>
+      <li><span class="sn">3</span>开始第 1 轮</li>
+    </ol></div>
+    <div class="confirm-main">
+      <h1 id="confirmTitle">确认你的画像与求职偏好</h1>
+      <div class="legend" id="confirmLegend">已整理出 14 项信息，<b style="color:var(--warn-ink)">4 项需要你确认</b>，<b style="color:var(--gate)">2 项待补充</b>。</div>
+
+      <div class="card fsec">
+        <h3>画像</h3><p class="d">从简历中提取，可以直接修改</p>
+        <div class="field"><label>学校 / 学历</label><div class="val"><input class="inp w200" value="北方某理工大学"><select class="inp"><option>本科</option><option>硕士</option></select></div><span class="src resume">来自简历</span></div>
+        <div class="field"><label>专业</label><div class="val"><input class="inp w200" value="计算机科学与技术"></div><span class="src resume">来自简历</span></div>
+        <div class="field"><label>毕业届别</label><div class="val"><select class="inp"><option>2027 届</option><option>2026 届</option></select></div><span class="src resume">来自简历</span></div>
+        <div class="field"><label>技能</label><div class="val"><span class="tok">Java <i>×</i></span><span class="tok">Spring Boot <i>×</i></span><span class="tok">MySQL <i>×</i></span><span class="tok">Python <i>×</i></span><span class="tok">Redis <i>×</i></span><span class="tok add" onclick="toast('原型：输入技能名后添加')">+ 添加</span></div><span class="src resume">来自简历</span></div>
+        <div class="field"><label>项目 / 实习</label><div class="exp"><div>校园二手交易平台 · 后端开发<br><span>Spring Boot、MySQL、Redis · 2025.09–2025.12</span></div><div>招聘数据爬虫与清洗 · 课程项目<br><span>Python、ECharts · 2025.03–2025.06</span></div></div><span class="src resume">来自简历</span></div>
+        <div class="field"><label>竞赛 / 证书</label><div class="val">蓝桥杯 Java 组省赛二等奖</div><span class="src resume">来自简历</span></div>
+      </div>
+
+      <div class="card fsec">
+        <h3>求职偏好</h3><p class="d">简历里通常没有这些信息，AI 推测的部分请逐项确认</p>
+        <div class="field"><label>求职类型</label><div class="val"><div class="seg" data-seg><button class="on">实习</button><button>校招</button><button>都看</button></div><label><input type="checkbox" checked> 日常实习</label><label><input type="checkbox" checked> 暑期实习</label></div><span class="src ai">AI 推测</span></div>
+        <div class="field"><label>目标方向</label><div class="val"><span class="lv">首选</span><span class="tok">后端开发 <i>×</i></span><span class="lv">可接受</span><span class="tok">数据开发 <i>×</i></span><span class="tok add" onclick="toast('原型：从方向列表中选择')">+ 添加</span></div><span class="src ai">AI 推测</span></div>
+        <div class="field"><label>意向城市</label><div class="val"><span class="lv">首选</span><span class="tok">北京 <i>×</i></span><span class="tok add">+</span><span class="lv">可接受</span><span class="tok add">+</span><span class="lv">不考虑</span><span class="tok add">+</span><label style="font-size:13px"><input type="checkbox"> 接受远程</label></div><span class="src ai">AI 推测</span></div>
+        <div class="field" id="f-pay"><label>实习薪资底线</label><div class="val"><input class="inp w60" type="number" placeholder="—"> 元 / 天</div><span class="src miss">待补充</span><div class="why">日常实习按天计薪</div></div>
+        <div class="field" id="f-days"><label>每周到岗</label><div class="val">通常 <input class="inp w60" type="number" placeholder="—"> 天，最多可调整到 <input class="inp w60" type="number" placeholder="—"> 天</div><span class="src miss">待补充</span><div class="why">不确定的话，"最多"可以填宽一点，Agent 会把超出"通常"的岗位放进"可以考虑"并提示</div></div>
+        <div class="field"><label>实习时长</label><div class="val">通常 <input class="inp w60" type="number" value="3"> 个月，最多可延长到 <input class="inp w60" type="number" value="6"> 个月</div><span class="src ai">AI 推测</span></div>
+        <div class="field"><label>看重转正机会</label><div class="val"><div class="seg" data-seg><button class="on">是</button><button>否</button></div></div><span class="src user">默认</span></div>
+      </div>
+
+      <div class="card fsec">
+        <h3>还想让 Agent 知道的（选填）</h3><p class="d">用你自己的话写，Agent 只会解析这里补充的内容，不会改动上面你确认过的信息</p>
+        <div class="field" style="grid-template-columns:1fr"><div>
+          <div class="muted" style="font-size:13px;margin-bottom:6px">简历里没写的经历或技能</div>
+          <textarea class="inp" id="extra1" placeholder="例如：上学期自学过 Spark，做过一个日志分析的小练习"></textarea>
+          <div class="muted" style="font-size:13px;margin:12px 0 6px">求职上的其他想法</div>
+          <textarea class="inp" id="extra2" placeholder="例如：想先在中小公司积累经验，不想去外包"></textarea>
+          <div class="parsed" id="parsed"></div>
+        </div></div>
+      </div>
+    </div>
+    <div class="e-foot"><div>
+      <a class="btn" href="#upload" id="confirmBack">返回</a>
+      <span style="display:flex;align-items:center;gap:16px"><span class="muted" style="font-size:13px">草稿已自动保存 · 14:32</span>
+      <button class="btn primary" id="confirmBtn" onclick="submitConfirm()">确认并开始第 1 轮 →</button></span>
+    </div></div>
+  </section>
+</div>
+
+<div class="app">
+  <!-- ========== 左侧导航 ========== -->
+  <aside class="nav">
+    <div class="brand">AI Agent 求职管家<small>实习 / 校招</small></div>
+    <a href="#overview" data-p="overview">总览</a>
+    <a href="#recommend" data-p="recommend">推荐 <span class="badge" id="navBadge">6</span></a>
+    <a href="#board" data-p="board">投递进度 <span class="badge" id="boardBadge" style="display:none"></span></a>
+    <a href="#review" data-p="review">复盘 <span class="badge" id="reviewBadge" style="display:none"></span></a>
+    <a href="#strategy" data-p="strategy">策略</a>
+    <a href="#profile" data-p="profile">画像</a>
+    <div class="persona" id="persona"></div>
+  </aside>
+
+  <div class="main">
+    <header class="topbar">
+      <h1 id="pageTitle">总览</h1>
+      <span class="status" id="pageStatus"><i></i>第 2 轮 · 等你确认 6 个岗位</span>
+      <div class="clock">模拟日期 <b id="simDate"></b><button class="btn" onclick="advance(1)">推进 1 天</button><button class="btn" onclick="advance(7)">推进 7 天</button><button class="btn primary" onclick="toast('第二版开放：使用 ResumeIQ 账号登录，保存进度')">登录保存进度</button></div>
+    </header>
+
+    <!-- ===================== 总览 ===================== -->
+    <section class="page" id="p-overview">
+      <div id="ov-r1" style="display:none"></div>
+      <div id="ov-r2" style="display:contents">
+      <div class="card">
+        <div class="card-h"><h3>第 2 轮进度</h3><span class="sub">策略 v2 · 开始于 3 月 10 日</span></div>
+        <div class="stepper">
+          <div class="step done"><div class="dot">✓</div><div class="lb">拉取岗位</div><div class="ex">新上线 64 个</div></div><div class="bar-link done"></div>
+          <div class="step done"><div class="dot">✓</div><div class="lb">硬过滤</div><div class="ex">182 → 43</div></div><div class="bar-link done"></div>
+          <div class="step done"><div class="dot">✓</div><div class="lb">逐条匹配</div><div class="ex">分析 20 个</div></div><div class="bar-link done"></div>
+          <div class="step now"><div class="dot">4</div><div class="lb">确认投递</div><div class="ex">等你确认</div></div><div class="bar-link"></div>
+          <div class="step"><div class="dot">5</div><div class="lb">状态跟踪</div><div class="ex"></div></div><div class="bar-link"></div>
+          <div class="step"><div class="dot">6</div><div class="lb">复盘</div><div class="ex"></div></div><div class="bar-link"></div>
+          <div class="step"><div class="dot">7</div><div class="lb">更新策略</div><div class="ex"></div></div>
+        </div>
+      </div>
+
+      <div class="grid2">
+        <div class="card">
+          <div class="card-h"><h3>待你处理</h3><span class="sub">Agent 正在等待这些决定</span></div>
+          <div class="card-b" style="padding-top:6px">
+            <div class="todo"><div class="ic red">6</div><div class="tx"><b>确认本轮推荐的 6 个岗位</b><span>推荐 4 个 · 可以考虑 2 个</span></div><a class="btn primary sm" href="#recommend">去确认</a></div>
+            <div class="todo"><div class="ic amb">?</div><div class="tx"><b>能否接受每周到岗 4 天？</b><span>本轮有 7 个岗位受这个条件影响</span></div><a class="btn sm" href="#recommend">去回答</a></div>
+
+            <div class="todo"><div class="ic amb">!</div><div class="tx"><b>2 个推荐岗位 7 天内截止</b><span>星河科技 · 3 天后；北辰电商 · 6 天后</span></div><a class="btn sm" href="#recommend">查看</a></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-h"><h3>当前策略 v2</h3><a class="right muted" style="font-size:12px;text-decoration:underline" href="#review">来自第 1 轮复盘</a></div>
+          <div class="card-b" style="padding-top:8px">
+            <div class="strat-line"><span class="k">方向</span><span>首选 后端开发；可接受 数据开发</span></div>
+            <div class="strat-line"><span class="k">城市</span><span>首选 北京、上海；可接受 杭州</span></div>
+            <div class="strat-line"><span class="k">到岗</span><span>通常每周 3 天，最多 4 天</span></div>
+            <div class="strat-line"><span class="k">探索比例</span><span>20%</span></div>
+            <div class="strat-line"><span class="k">本轮新规则</span><span>JD 必须项含 Spark / Hive 且你不具备 → 不推荐</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="kpis">
+        <div class="card kpi"><div class="l">累计投递</div><div class="n">15</div><div class="d">第 1 轮 15 个</div></div>
+        <div class="card kpi"><div class="l">通过简历关</div><div class="n">6</div><div class="d">通过率 40%</div></div>
+        <div class="card kpi"><div class="l">笔试 / 测评通过</div><div class="n">3</div><div class="d">2 个结果待出</div></div>
+        <div class="card kpi"><div class="l">面试</div><div class="n">2</div><div class="d up">云杉数据 · 3 月 16 日</div></div>
+      </div>
+
+      <div class="card">
+        <div class="card-h"><h3>最近动态</h3><a class="right muted" style="font-size:12px;text-decoration:underline" href="#board">投递进度 ›</a></div>
+        <div class="card-b feed" style="padding-top:6px">
+          <div class="feed-i"><span class="dt">3/13</span><span>云杉数据 · 后端开发实习生：<b>邀请面试</b>（3 月 16 日 14:00）</span><span class="tag rec">面试</span></div>
+          <div class="feed-i"><span class="dt">3/12</span><span>蓝鲸智能 · 数据分析实习生：笔试未通过</span><span class="tag plain">被拒</span></div>
+          <div class="feed-i"><span class="dt">3/11</span><span>Agent 完成第 1 轮复盘，提出 3 条策略提案</span><span class="tag ink">复盘</span></div>
+          <div class="feed-i"><span class="dt">3/10</span><span>第 2 轮推荐已生成，共 6 个岗位</span><span class="tag plain">系统</span></div>
+        </div>
+      </div>
+      </div>
+    </section>
+
+    <!-- ===================== 推荐 ===================== -->
+    <section class="page" id="p-recommend">
+      <div id="rec-state" style="display:none"></div>
+      <div class="ask" id="ask">
+        <p>本轮有 <b>7 个岗位</b>要求每周到岗 4 天，你填的是"通常 3 天，最多 4 天"。其中技术匹配较好的 2 个已放进"可以考虑"。<br>你能接受每周 4 天吗？</p>
+        <div class="btns">
+          <button class="btn" onclick="answer('已更新偏好：通常每周 4 天。2 个岗位升为"推荐"，下一轮会多推荐这类岗位。')">可以，更新偏好</button>
+          <button class="btn" onclick="answer('好的，要求每周 4 天的岗位以后不再推荐，本轮这 2 个也已移除。')">不行</button>
+          <button class="btn" onclick="answer('好的，保留这 2 个岗位，偏好不变。')">只看这 2 个</button>
+        </div>
+      </div>
+      <div class="rec-area" id="recArea">
+        <div class="card">
+          <div class="list-head">
+            <label><input type="checkbox" id="all" checked> 全选</label>
+            <span class="sum" id="recSum"></span>
+          </div>
+          <div id="list"></div>
+          <button class="folded" id="foldBtn" onclick="document.getElementById('filtered').classList.toggle('show')"></button>
+          <div class="filtered" id="filtered">
+            技能、方向重合度低（粗筛阶段）· 23 个<br>
+            Spark / Hive 为必须项且你不具备（第 1 轮复盘新规则）· 6 个<br>
+            其他必须项明确不满足（如 C++、Flink）· 5 个<br>
+            需每周 5 天，超出你最多可调整的 4 天 · 3 个<br>
+            <span style="opacity:.7">另有 139 个岗位因求职类型、城市、届别、截止日期不符，在硬过滤阶段排除</span>
+          </div>
+        </div>
+        <div class="card detail" id="detail"></div>
+      </div>
+    </section>
+
+    <!-- ===================== 复盘 ===================== -->
+    <section class="page" id="p-review">
+      <div id="rv-empty" style="display:none"></div>
+      <div id="rv-content" style="display:contents">
+      <div class="note-bar" id="rvNote"></div>
+
+      <!-- 关键数字 -->
+      <div class="sum-row">
+        <div class="card kpi"><div class="l">投递</div><div class="n">15</div></div>
+        <div class="card kpi"><div class="l">通过简历关</div><div class="n">6</div></div>
+        <div class="card kpi"><div class="l">通过笔试 / 测评</div><div class="n">1</div><div class="d">另有 3 个结果待出</div></div>
+        <div class="card kpi"><div class="l">进入面试</div><div class="n">1</div></div>
+        <div class="card kpi"><div class="l">仍在等待</div><div class="n">4</div><div class="d">结果计入下一次复盘</div></div>
+      </div>
+
+      <!-- 本轮发现 -->
+      <div class="card">
+        <div class="card-h"><h3>本轮发现 · 4 条</h3><span class="sub">按重要程度排序</span></div>
+        <div class="card-b" style="padding-top:8px">
+          <div class="finding"><span class="ft bad">问题</span>
+            <div><b>数据开发岗位大多卡在简历关</b><p>5 投只过 1 个，拒信大多提到缺少 Spark / Hive 经验。</p></div>
+            <span class="fl">对应建议 ①</span></div>
+          <div class="finding"><span class="ft bad">问题</span>
+            <div><b>"可以考虑"档的岗位通过率偏低</b><p>6 投只过 1 个，但主要是受数据开发岗位拖累。</p></div>
+            <span class="fl">对应建议 ③</span></div>
+          <div class="finding"><span class="ft pref">偏好</span>
+            <div><b>你可能不太想去杭州</b><p>跳过的 3 个岗位里，有 2 个因为"不想去这个城市"，都在杭州。</p></div>
+            <span class="fl">对应建议 ②</span></div>
+          <div class="finding"><span class="ft good">正常</span>
+            <div><b>后端开发方向表现正常</b><p>10 投 5 个通过简历关，进入笔试后表现也正常，保持当前策略。</p></div>
+            <span class="fl">无需调整</span></div>
+        </div>
+      </div>
+      <!-- 调整建议 -->
+      <div class="card">
+        <div class="card-h"><h3>调整建议 · 3 条</h3><span class="sub">你确认后才会生效</span></div>
+        <div class="card-b" style="display:flex;flex-direction:column;gap:14px">
+
+          <div class="prop" data-prop="1">
+            <div class="prop-h"><b>① 不再推荐要求 Spark / Hive 的岗位</b><span class="str mid">依据：5 个投递 · 3 封拒信说法一致</span></div>
+            <div class="evi">
+              <div class="evi-t">证据</div>
+              <ul>
+                <li>数据开发方向 <b class="hl">5 投只过 1 个</b>简历关，后端开发是 10 投过 5 个</li>
+                <li>4 封拒信中有 <b class="hl">3 封写明"缺少 Spark / Hive 经验"</b></li>
+                <li>被拒的岗位<b class="hl">都把 Spark / Hive 列为必须项</b>；唯一通过的那个只列为加分项</li>
+              </ul>
+            </div>
+            <div class="tip">还想投数据开发？可以先补一个 Spark 小项目，或<a href="#" onclick="toast('原型：跳转 ResumeIQ');return false">去 ResumeIQ 强化相关经历的描述 ›</a></div>
+            <div class="prop-a"><button class="btn sm" onclick="decide(this,false)">不采纳</button><button class="btn primary sm" onclick="decide(this,true)">采纳</button></div>
+          </div>
+
+          <div class="prop" data-prop="2">
+            <div class="prop-h"><b>② 杭州还要保留在"可接受城市"里吗？</b><span class="str you">需要你决定</span></div>
+            <div class="evi">
+              <div class="evi-t">证据</div>
+              <ul>
+                <li>你跳过的 3 个岗位里，<b class="hl">2 个原因是"不想去这个城市"，都在杭州</b></li>
+                <li>投递的 4 个杭州岗位只有 1 个通过简历关（样本太少，仅供参考）</li>
+              </ul>
+            </div>
+            <div class="tip">城市是你的个人偏好，Agent 只提建议，不会自动修改。</div>
+            <div class="prop-a"><button class="btn sm" onclick="decide(this,false)">保持不变</button><button class="btn primary sm" onclick="decide(this,true)">移除杭州</button></div>
+          </div>
+
+          <div class="prop" data-prop="3">
+            <div class="prop-h"><b>③ 减少探索岗位：20% → 10%</b><span class="str low">依据不足，仅供参考</span></div>
+            <div class="evi">
+              <div class="evi-t">证据</div>
+              <ul>
+                <li>"可以考虑"档 <b class="hl">6 投只过 1 个</b>，"推荐"档 9 投过 5 个</li>
+              </ul>
+              <div class="evi-t" style="margin-top:8px">需要注意</div>
+              <ul>
+                <li>问题主要来自数据开发，建议 ① 已经处理</li>
+                <li>探索岗位太少，Agent 会更难发现适合你的新方向</li>
+              </ul>
+            </div>
+            <div class="tip">Agent 原本建议降到 5%，低于系统设定的下限，已自动调整为 10%。</div>
+            <div class="prop-a"><button class="btn sm" onclick="decide(this,false)">不采纳</button><button class="btn primary sm" onclick="decide(this,true)">采纳</button></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 数据 -->
+      <div class="grid2">
+        <div class="card">
+          <div class="card-h"><h3>每个环节通过了多少</h3></div>
+          <div class="card-b funnel">
+            <div class="f-row"><span>已投递</span><div class="f-bar"><i style="width:100%"></i></div><span class="v">15</span></div>
+            <div class="f-row bad"><span>通过简历关</span><div class="f-bar"><i style="width:40%"></i></div><span class="v">6</span></div>
+            <div class="f-row"><span>通过笔试 / 测评</span><div class="f-bar"><i style="width:6.7%"></i></div><span class="v">1</span></div>
+            <div class="f-row"><span>进入面试</span><div class="f-bar"><i style="width:6.7%"></i></div><span class="v">1</span></div>
+            <p class="muted" style="font-size:12px;margin-top:6px;line-height:1.6">流失最多的是<b style="color:var(--gate)">简历关</b>（15 → 6）；笔试 / 测评还有 3 个结果待出，会计入下一次复盘。</p>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-h"><h3>简历关通过率对比</h3></div>
+          <div class="card-b grp" style="padding-top:4px">
+            <h4>按方向</h4>
+            <div class="g-row"><span>后端开发</span><div class="g-bar"><i style="width:50%"></i></div><span class="v">10 投 5 过</span></div>
+            <div class="g-row bad"><span>数据开发</span><div class="g-bar"><i style="width:20%"></i></div><span class="v">5 投 1 过</span></div>
+            <h4>按推荐档位</h4>
+            <div class="g-row"><span>推荐</span><div class="g-bar"><i style="width:56%"></i></div><span class="v">9 投 5 过</span></div>
+            <div class="g-row bad"><span>可以考虑</span><div class="g-bar"><i style="width:17%"></i></div><span class="v">6 投 1 过</span></div>
+            <h4>按城市</h4>
+            <div class="g-row"><span>北京 / 上海</span><div class="g-bar"><i style="width:45%"></i></div><span class="v">11 投 5 过</span></div>
+            <div class="g-row"><span>杭州</span><div class="g-bar thin"><i style="width:25%"></i></div><span class="v">4 投 1 过 · 样本少</span></div>
+          </div>
+        </div>
+      </div>
+
+      </div>
+    </section>
+
+    <!-- ===================== 投递看板 ===================== -->
+    <section class="page" id="p-board">
+      <div class="board-tools">
+        <div class="tabs" id="boardTabs"><button class="on" data-r="all">全部轮次</button><button data-r="1">第 1 轮</button><button data-r="2" id="boardTab2">第 2 轮</button></div>
+        <span class="muted" style="font-size:12px;margin-left:auto;text-align:right;line-height:1.6">笔试 / 测评只有部分岗位有（校招、暑期实习较常见），没有的会直接进入面试<br>投递后 7 天没有任何消息，自动标记为"无回应"</span>
+      </div>
+      <div class="board" id="board"></div>
+    </section>
+
+    <!-- ===================== 策略 ===================== -->
+    <section class="page" id="p-strategy">
+      <div>
+        <div class="card">
+          <div class="card-h"><h3 id="stTitle">当前策略 v2</h3><span class="sub" id="stSub">第 2 轮正在使用</span></div>
+          <div class="card-b" style="padding-top:6px">
+            <div class="param"><span class="k">求职类型</span><span>实习（日常 + 暑期）</span><span class="src user">你设置</span></div>
+            <div class="param"><span class="k">目标方向</span><span>首选 后端开发；可接受 数据开发</span><span class="src user">你设置</span></div>
+            <div class="param"><span class="k">意向城市</span><span>首选 北京、上海；可接受 杭州</span><span class="src user">你设置</span></div>
+            <div class="param"><span class="k">到岗 / 时长</span><span>每周通常 3 天，最多 4 天；3–6 个月</span><span class="src user">你设置</span></div>
+            <div class="param"><span class="k">"推荐"档规则</span><span>必须项全部满足（最多 1 项部分满足），加分项满足过半</span><span class="src resume">默认</span></div>
+            <div class="param" id="stRule"><span class="k">新增规则</span><span>JD 必须项含 Spark / Hive 且你不具备 → 不推荐</span><span class="src ai">第 1 轮复盘</span></div>
+            <div class="param"><span class="k">探索比例</span><span>20%（下限 10%）</span><span class="src resume">默认</span></div>
+            <div class="param"><span class="k">投递限制</span><span>每轮最多 25 个；同公司每季最多 2 个</span><span class="src resume">默认</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-h"><h3>版本历史</h3><span class="sub">每次变化的来源和原因</span></div>
+        <div class="card-b" style="padding-top:4px">
+          <div class="ver" id="verV2"><div><div class="vn">v2</div><div class="vd">3 月 10 日</div></div>
+            <div><b>来自第 1 轮复盘</b> · 你采纳了 1 条建议，2 条未采纳 <a href="#review" style="font-size:12px;color:var(--muted);text-decoration:underline;margin-left:6px">查看这次复盘 ›</a>
+              <ul><li>新增：JD 必须项含 Spark / Hive 且你不具备 → 不推荐</li>
+                  <li class="rej">建议：把杭州移出可接受城市（你选择保持不变）</li>
+                  <li class="rej">探索比例 20% → 10%（你未采纳）</li></ul></div></div>
+          <div class="ver"><div><div class="vn">v1</div><div class="vd">3 月 3 日</div></div>
+            <div><b>来自你确认的画像与偏好</b>
+              <ul><li>根据偏好生成硬过滤条件；档位规则和探索比例使用默认值</li></ul></div></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== Agent 日志 ===================== -->
+    <section class="page" id="p-log">
+      <div class="board-tools">
+        <div class="tabs" id="logTabs"><button data-r="1">第 1 轮</button><button data-r="2" class="on" id="logTab2">第 2 轮</button></div>
+        <div class="log-sum" style="margin-left:auto" id="logSum"></div>
+      </div>
+      <div class="card" id="logList"></div>
+      <p class="muted" style="font-size:12px">点击任意一步查看详情。执行者：<span class="actor code">程序</span> <span class="actor llm">大模型</span> <span class="actor tool">工具</span> <span class="actor you">你</span></p>
+    </section>
+
+    <!-- ===================== 画像 ===================== -->
+    <section class="page" id="p-profile">
+      <div class="grid2">
+        <div class="card">
+          <div class="card-h"><h3 id="pfTitle">画像 v1</h3><span class="sub" id="pfDate">3 月 3 日确认</span><a class="btn sm right" href="#" onclick="editProfile();return false">修改</a></div>
+          <div class="card-b" style="padding-top:4px">
+            <div class="pf"><span class="k">学校 / 学历</span><span>北方某理工大学 · 本科</span><span class="src resume">简历</span></div>
+            <div class="pf"><span class="k">专业 / 届别</span><span>计算机科学与技术 · 2027 届</span><span class="src resume">简历</span></div>
+            <div class="pf"><span class="k">技能</span><span>Java、Spring Boot、MySQL、Python、Redis</span><span class="src resume">简历</span></div>
+            <div class="pf"><span class="k">项目</span><span>校园二手交易平台；招聘数据爬虫与清洗</span><span class="src resume">简历</span></div>
+            <div class="pf"><span class="k">竞赛</span><span>蓝桥杯 Java 组省赛二等奖</span><span class="src resume">简历</span></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-h"><h3>求职偏好</h3><a class="btn sm right" href="#" onclick="editProfile();return false">修改</a></div>
+          <div class="card-b" style="padding-top:4px">
+            <div class="pf"><span class="k">求职类型</span><span>实习（日常 + 暑期）</span><span class="src user">已确认</span></div>
+            <div class="pf"><span class="k">方向</span><span>首选 后端开发；可接受 数据开发</span><span class="src user">已确认</span></div>
+            <div class="pf"><span class="k">城市</span><span>首选 北京、上海；可接受 杭州</span><span class="src user">已确认</span></div>
+            <div class="pf"><span class="k">薪资底线</span><span>200 元 / 天</span><span class="src user">你填写</span></div>
+            <div class="pf"><span class="k">每周到岗</span><span>通常 3 天，最多 4 天</span><span class="src user">你填写</span></div>
+            <div class="pf"><span class="k">实习时长</span><span>通常 3 个月，最多 6 个月</span><span class="src user">已确认</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="note-bar">修改画像或偏好会生成新版本。本轮还没确认投递时，修改用于本轮（重新生成推荐）；已经投递后，修改用于下一轮。</div>
+    </section>
+
+    <!-- ===================== 未做的页面 ===================== -->
+    <section class="page" id="p-placeholder">
+      <div class="card placeholder"><b style="color:var(--ink);font-size:16px">此页面在下一批原型中</b><br>第一批先确认总览、推荐、复盘三个核心页面。</div>
+    </section>
+
+    <!-- 底部操作条 -->
+    <div class="actionbar" id="bar-recommend">
+      <span class="note">同公司每季限投 2 个 · 本轮上限 25 个</span>
+      <button class="btn primary" id="submit" onclick="confirmApply()">确认投递 6 个</button>
+    </div>
+    <div class="actionbar" id="bar-review">
+      <span class="note" id="reviewNote">还有 3 条建议未处理</span>
+      <button class="btn primary" id="genBtn" disabled onclick="finishReview()">生成策略 v2 并开始下一轮</button>
+    </div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+<div class="overlay" id="overlay" onclick="closeDrawer()"></div>
+<aside class="drawer" id="drawer"></aside>
+<div class="proto-switch" id="protoSwitch"><span>原型场景</span><button data-s="r1" onclick="startR1(true)">新用户 · 第 1 轮</button><button data-s="r2" onclick="startR2(true)">演示人物 · 第 2 轮</button></div>
+
+<script>
+/* =====================================================================
+   原型脚本：用前端变量模拟两种场景
+   r1 = 新用户第 1 轮（生成推荐 → 确认投递 → 推进时间 → 自动复盘 → 处理建议 → 第 2 轮）
+   r2 = 演示人物第 2 轮（第 1 轮已完成）
+   ===================================================================== */
+
+/* ---------- 工具函数 ---------- */
+const YEAR = 2026;
+const D = s => { const [m, d] = s.split('/').map(Number); return new Date(YEAR, m - 1, d); };
+const addDays = (dt, n) => new Date(dt.getFullYear(), dt.getMonth(), dt.getDate() + n);
+const pad = n => String(n).padStart(2, '0');
+const fmt = dt => `${dt.getFullYear()}-${pad(dt.getMonth() + 1)}-${pad(dt.getDate())}`;
+const fmtCn = dt => `${dt.getFullYear()} 年 ${dt.getMonth() + 1} 月 ${dt.getDate()} 日`;
+const $ = id => document.getElementById(id);
+const icon = { ok:'✓', part:'△', no:'✗' };
+const tierTag = t => t === 'rec' ? '<span class="tag rec">推荐</span>' : '<span class="tag con">可以考虑 · 探索</span>';
+
+/* ---------- 场景状态 ---------- */
+// phase：generating 生成推荐中 / apply 等你确认投递 / tracking 跟踪中 / review 等你确认调整建议
+const S = { mode:'r2', phase:'apply', day:D('3/14'), genStep:3, applied:0, skippedCount:0, newApps:new Set(), persona:'小周', r2Applied:0, profileVer:1 };
+const R1_START = D('3/03');
+
+/* ---------- 推荐数据：第 2 轮（演示人物） ---------- */
+const jobsR2 = [
+  { id:1, title:'后端开发实习生', co:'星河科技', city:'上海', cityLv:'首选', type:'日常实习', pay:'300 元/天', days:'每周 3 天 · 3 个月', tier:'rec', due:'3 天后截止',
+    reason:'5 条必须项全部满足，岗位技术栈和你的课程项目高度重合；首选城市，且 3 天后截止，建议优先投递。',
+    reqs:[['ok','熟悉 Java 或 Go','必须','项目"校园二手交易平台"使用 Spring Boot 开发后端接口'],['ok','了解 MySQL 与索引优化','必须','课程设计中负责数据库建模与慢查询优化'],['ok','每周到岗 3 天及以上','必须','你通常每周可到岗 3 天'],['ok','2027 届本科及以上','必须','2027 届本科'],['ok','计算机相关专业','必须','计算机科学与技术'],['part','有 Redis 使用经验','加分','项目中用过 Redis 缓存，但描述较简单'],['ok','有算法竞赛或开源经历','加分','蓝桥杯省赛二等奖']], risk:null },
+  { id:2, title:'后端开发实习生（基础架构）', co:'云杉数据', city:'北京', cityLv:'首选', type:'日常实习', pay:'350 元/天', days:'每周 3 天 · 3 个月', tier:'rec', due:null,
+    reason:'必须项全部满足，岗位明确有转正机会，符合你"看重转正"的偏好。',
+    reqs:[['ok','熟悉 Go 或 Java','必须','Java 项目经历'],['ok','理解 TCP/IP、HTTP','必须','计算机网络课程项目'],['ok','2027 届','必须','符合'],['part','了解 Docker','加分','个人项目用过 Docker 部署'],['ok','有 Linux 使用经验','加分','日常开发环境为 Linux']], risk:null },
+  { id:3, title:'Java 开发实习生', co:'北辰电商', city:'杭州', cityLv:'可接受', type:'日常实习', pay:'260 元/天', days:'每周 3 天 · 3 个月', tier:'rec', due:'6 天后截止',
+    reason:'必须项全部满足；城市为可接受城市，所以排在首选城市岗位之后。',
+    reqs:[['ok','熟悉 Java 基础与集合框架','必须','课程成绩与项目经历'],['ok','了解 Spring Boot','必须','校园二手交易平台项目'],['ok','每周 3 天','必须','符合'],['ok','2027 届','必须','符合'],['no','有电商业务实习经历','加分','暂无'],['ok','熟悉 Git 协作流程','加分','项目使用 GitHub 多人协作']], risk:null },
+  { id:4, title:'数据开发实习生', co:'蓝鲸智能', city:'北京', cityLv:'首选', type:'日常实习', pay:'280 元/天', days:'每周 3 天 · 4 个月', tier:'rec', due:null,
+    reason:'必须项满足 3 项、部分满足 1 项（SQL 熟练度）；Spark 只是加分项，不受本轮新规则影响。',
+    reqs:[['part','熟练使用 SQL','必须','数据库课程 + 项目报表模块，复杂查询经验较少'],['ok','掌握 Python','必须','爬虫与数据清洗项目'],['ok','每周到岗 3 天','必须','符合'],['ok','2027 届','必须','符合'],['no','了解 Spark','加分','暂无项目经历'],['ok','有数据可视化经验','加分','项目中用 ECharts 做过看板']],
+    risk:'上一轮数据开发方向简历通过率较低（1/5），这个岗位 Spark 只是加分项，可以尝试。' },
+  { id:5, title:'后端开发实习生', co:'极光互动', city:'上海', cityLv:'首选', type:'日常实习', pay:'320 元/天', days:'每周 4 天 · 3 个月', tier:'con', due:null, flag:'需每周 4 天',
+    reason:'技术要求基本满足，但需要每周到岗 4 天，超过你通常的 3 天（在你最多可调整的 4 天以内），因此放在"可以考虑"。',
+    reqs:[['ok','熟悉 Java','必须','项目经历'],['ok','了解 MySQL','必须','项目经历'],['part','每周到岗 4 天','必须','你通常 3 天，最多可调整到 4 天'],['ok','2027 届','必须','符合']],
+    risk:'如果你接受每周 4 天，这个岗位会升为"推荐"。' },
+  { id:6, title:'后端开发实习生（中台）', co:'青桐教育', city:'北京', cityLv:'首选', type:'日常实习', pay:'240 元/天', days:'每周 4 天 · 4 个月', tier:'con', due:null, flag:'需每周 4 天',
+    reason:'探索岗位：教育行业中台方向，可以测试非互联网大厂的反馈；需要每周 4 天。',
+    reqs:[['ok','熟悉 Java','必须','项目经历'],['part','有微服务经验','必须','了解概念，项目为单体架构'],['part','每周到岗 4 天','必须','你通常 3 天，最多可调整到 4 天'],['ok','2027 届','必须','符合']],
+    risk:'作为探索岗位，用来验证"教育行业中台"方向是否值得继续投。' },
+];
+
+/* ---------- 推荐数据：第 1 轮（新用户） ---------- */
+const TPL = {
+  be:   { reason:'必须项全部满足，加分项满足过半，与你的后端项目经历匹配度高。', risk:null,
+          reqs:[['ok','熟悉 Java 或 Go','必须','项目"校园二手交易平台"使用 Spring Boot 开发后端接口'],['ok','了解 MySQL','必须','课程设计中负责数据库建模'],['ok','每周到岗 3 天','必须','你通常每周可到岗 3 天'],['ok','2027 届本科及以上','必须','2027 届本科'],['part','有 Redis 使用经验','加分','项目中用过 Redis 缓存，但描述较简单'],['ok','熟悉 Git 协作流程','加分','项目使用 GitHub 多人协作']] },
+  bec:  { reason:'探索岗位：必须项中"微服务"只部分满足，加分项未满足，用来试探在线教育方向的反馈。', risk:'微服务经验是必须项，只了解概念，简历关有一定风险。',
+          reqs:[['ok','熟悉 Java','必须','项目经历'],['part','有微服务开发经验','必须','了解概念，项目为单体架构'],['ok','每周到岗 3 天','必须','符合'],['ok','2027 届','必须','符合'],['no','有在线教育业务经验','加分','暂无']] },
+  dd:   { reason:'探索岗位：Spark / Hive 只有课程接触，判为"部分满足"；用来试探数据开发方向的反馈。', risk:'Spark / Hive 是必须项，你只在课程实验中接触过，简历关可能有风险。',
+          reqs:[['ok','熟练使用 SQL','必须','数据库课程 + 项目报表模块'],['part','熟悉 Spark 或 Hive','必须','课程实验中接触过 Spark，没有项目经历'],['ok','掌握 Python','必须','爬虫与数据清洗项目'],['ok','2027 届','必须','符合'],['ok','有数据可视化经验','加分','项目中用 ECharts 做过看板']] },
+  da:   { reason:'探索岗位：数据分析方向与你的数据清洗项目相关，但 SQL 和统计基础只部分满足。', risk:null,
+          reqs:[['part','熟练使用 SQL','必须','复杂查询经验较少'],['ok','掌握 Python','必须','爬虫与数据清洗项目'],['part','有统计学基础','必须','修过概率统计课程，没有实际应用'],['ok','2027 届','必须','符合'],['ok','有数据可视化经验','加分','项目中用 ECharts 做过看板']] },
+  game: { reason:'探索岗位：游戏服务端与后端开发技能相通，用来试探游戏行业的反馈。', risk:null,
+          reqs:[['ok','熟悉 Java 或 C++','必须','Java 项目经历'],['part','了解网络编程','必须','计算机网络课程项目，没有实际项目'],['ok','2027 届','必须','符合'],['no','热爱游戏行业','加分','简历中没有相关内容']] },
+};
+const jobsR1 = [
+  { id:101, title:'后端开发实习生', co:'星辰网络', city:'北京', tier:'rec', kind:'be', due:'3 天后截止' },
+  { id:104, title:'后端开发实习生', co:'云杉数据', city:'北京', tier:'rec', kind:'be', due:'5 天后截止' },
+  { id:103, title:'后端开发实习生', co:'风行科技', city:'上海', tier:'rec', kind:'be' },
+  { id:105, title:'后端开发实习生', co:'远山科技', city:'上海', tier:'rec', kind:'be' },
+  { id:106, title:'后端开发实习生', co:'拾光网络', city:'北京', tier:'rec', kind:'be' },
+  { id:107, title:'Java 实习生', co:'海川科技', city:'上海', tier:'rec', kind:'be' },
+  { id:102, title:'Java 实习生', co:'海蓝科技', city:'杭州', tier:'rec', kind:'be' },
+  { id:108, title:'后端开发实习生', co:'鹏程软件', city:'杭州', tier:'rec', kind:'be' },
+  { id:109, title:'后端开发实习生', co:'蓝湾科技', city:'杭州', tier:'rec', kind:'be' },
+  { id:110, title:'Java 开发实习生', co:'西湖云', city:'杭州', tier:'rec', kind:'be' },
+  { id:111, title:'数据分析实习生', co:'蓝鲸智能', city:'北京', tier:'con', kind:'da' },
+  { id:112, title:'数据开发实习生', co:'青云数据', city:'北京', tier:'con', kind:'dd' },
+  { id:114, title:'数据开发实习生', co:'远航智能', city:'北京', tier:'con', kind:'dd' },
+  { id:113, title:'大数据开发实习生', co:'鹿鸣科技', city:'上海', tier:'con', kind:'dd' },
+  { id:115, title:'数据开发实习生', co:'森林数据', city:'上海', tier:'con', kind:'dd' },
+  { id:118, title:'游戏服务端实习生', co:'新锐游戏', city:'上海', tier:'con', kind:'game' },
+  { id:116, title:'后端开发实习生', co:'极客学堂', city:'杭州', tier:'con', kind:'bec' },
+  { id:117, title:'数据仓库实习生', co:'钱塘数据', city:'杭州', tier:'con', kind:'dd' },
+].map(j => ({ type:'日常实习', pay:'280 元/天', days:'每周 3 天 · 3 个月', cityLv: j.city === '杭州' ? '可接受' : '首选', ...TPL[j.kind], ...j }));
+
+const FILTERED = {
+  r1: { label:'已筛掉 33 个岗位，查看原因 ›', html:'技能、方向重合度低（粗筛阶段）· 31 个<br>必须项明确不满足（如 C++）· 2 个<br><span style="opacity:.7">另有 209 个岗位因求职类型、城市、届别、截止日期不符，在硬过滤阶段排除</span>' },
+  r2: { label:'已筛掉 37 个岗位，查看原因 ›', html:'技能、方向重合度低（粗筛阶段）· 23 个<br>Spark / Hive 为必须项且你不具备（第 1 轮复盘新规则）· 6 个<br>其他必须项明确不满足（如 C++、Flink）· 5 个<br>需每周 5 天，超出你最多可调整的 4 天 · 3 个<br><span style="opacity:.7">另有 139 个岗位因求职类型、城市、届别、截止日期不符，在硬过滤阶段排除</span>' },
+};
+const newRecState = list => ({ sel:list[0].id, checked:new Set(list.map(j => j.id)), skipped:new Set(), notes:{} });
+const REC = { r1:newRecState(jobsR1), r2:newRecState(jobsR2) };
+const RJ = () => S.mode === 'r1' ? jobsR1 : jobsR2;
+const RS = () => REC[S.mode];
+const roundNo = () => S.mode === 'r1' ? 1 : 2;
+
+/* ---------- 投递数据（第 1 轮的 15 个投递及其后续事件） ---------- */
+const cols = [['sent','等待回复'],['exam','笔试 / 测评'],['itv','面试'],['offer','Offer'],['rej','未通过'],['none','无回应']];
+const apps = [
+  { co:'星辰网络', t:'后端开发实习生', city:'北京', tier:'rec', ev:[['3/03','投递'],['3/06','简历通过，等待笔试'],['3/12','笔试通知','在线笔试：3 月 15 日 19:00，时长 90 分钟。']] },
+  { co:'海蓝科技', t:'Java 实习生', city:'杭州', tier:'rec', ev:[['3/03','投递'],['3/05','简历通过，等待测评'],['3/09','完成在线测评，等待结果']] },
+  { co:'风行科技', t:'后端开发实习生', city:'上海', tier:'rec', ev:[['3/03','投递'],['3/04','简历通过，等待笔试'],['3/08','完成笔试，等待结果'],['3/12','笔试通过，等待面试安排','HR 将在近期联系你安排面试。']] },
+  { co:'云杉数据', t:'后端开发实习生', city:'北京', tier:'rec', ev:[['3/03','投递'],['3/04','简历通过，等待笔试'],['3/07','完成笔试，等待结果'],['3/10','笔试通过，等待面试安排'],['3/13','面试邀请','一面：3 月 16 日 14:00，线上视频，约 45 分钟。']] },
+  { co:'远山科技', t:'后端开发实习生', city:'上海', tier:'rec', ev:[['3/03','投递'],['3/03','简历通过，等待面试'],['3/09','一面已完成，等待结果']] },
+  { co:'蓝鲸智能', t:'数据分析实习生', city:'北京', tier:'con', ev:[['3/03','投递'],['3/05','简历通过，等待笔试'],['3/08','完成笔试，等待结果'],['3/12','笔试未通过','感谢参加笔试，很遗憾本次未能进入下一环节。']] },
+  { co:'青云数据', t:'数据开发实习生', city:'北京', tier:'con', ev:[['3/03','投递'],['3/06','简历未通过','岗位需要有 Spark / Hive 实际项目经验，暂不匹配。']] },
+  { co:'鹿鸣科技', t:'大数据开发实习生', city:'上海', tier:'con', ev:[['3/03','投递'],['3/10','简历未通过','我们更希望候选人熟悉 Hive 数仓开发。']] },
+  { co:'远航智能', t:'数据开发实习生', city:'北京', tier:'con', ev:[['3/03','投递'],['3/05','简历未通过','缺少 Spark 相关经验。']] },
+  { co:'拾光网络', t:'后端开发实习生', city:'北京', tier:'rec', ev:[['3/03','投递'],['3/10','简历未通过']] },
+  { co:'极客学堂', t:'后端开发实习生', city:'杭州', tier:'con', ev:[['3/03','投递'],['3/10','简历未通过']] },
+  { co:'海川科技', t:'Java 实习生', city:'上海', tier:'rec', ev:[['3/03','投递']] },
+  { co:'森林数据', t:'数据开发实习生', city:'上海', tier:'con', ev:[['3/03','投递']] },
+  { co:'鹏程软件', t:'后端开发实习生', city:'杭州', tier:'rec', ev:[['3/03','投递']] },
+  { co:'蓝湾科技', t:'后端开发实习生', city:'杭州', tier:'rec', ev:[['3/03','投递']] },
+];
+// 事件文字 → 所在列
+function colOfEvent(title) {
+  if (title.includes('未通过')) return 'rej';
+  if (title.includes('无回应')) return 'none';
+  if (title.includes('面试') || title.includes('一面')) return 'itv';
+  if (title.includes('笔试') || title.includes('测评')) return 'exam';
+  return 'sent';
+}
+const visibleEvents = (a, day) => a.ev.filter(([d]) => D(d) <= day);
+function appState(a, day) {
+  const evs = visibleEvents(a, day);
+  const last = evs[evs.length - 1];
+  return { col: colOfEvent(last[1]), last: last[1], lastDay: D(last[0]), evs };
+}
+const boardDay = () => S.mode === 'r1' ? S.day : D('3/14');
+const appsVisible = () => (S.mode === 'r1' && !S.applied) ? [] : apps;
+const resultCount = () => appsVisible().filter(a => appState(a, boardDay()).col !== 'sent').length;
+
+/* ---------- 顶栏、导航红点、人物卡片 ---------- */
+function statusInfo() {
+  if (S.mode === 'r2') return S.r2Applied ? { text:'第 2 轮 · 跟踪中', red:false } : { text:`第 2 轮 · 等你确认 ${RJ().length} 个岗位`, red:true };
+  if (S.phase === 'generating') return { text:'第 1 轮 · 正在生成推荐', red:false };
+  if (S.phase === 'apply') return { text:`第 1 轮 · 等你确认 ${RJ().length} 个岗位`, red:true };
+  if (S.phase === 'tracking') return { text:`第 1 轮 · 跟踪中 · 已有 ${resultCount()} / ${apps.length} 个结果`, red:false };
+  return { text:`第 1 轮复盘 · ${3 - Object.keys(decisions).length} 条建议待处理`, red:true };
+}
+function renderTop() {
+  const st = statusInfo();
+  const el = $('pageStatus');
+  el.innerHTML = `<i></i>${st.text}`;
+  el.classList.toggle('done', !st.red);
+  $('simDate').textContent = `${fmtCn(S.mode === 'r1' ? S.day : D('3/14'))} · 春招`;
+  const canAdvance = S.mode === 'r1' && S.phase === 'tracking';
+  const tip = S.phase === 'generating' ? '正在生成推荐，请稍候' : S.phase === 'apply' || S.mode === 'r2' ? '先确认本轮投递，再推进时间' : '先处理复盘建议，再推进时间';
+  document.querySelectorAll('.clock .btn[onclick^="advance"]').forEach(b => { b.disabled = !canAdvance; b.title = canAdvance ? '' : tip; });
+}
+function setBadge(id, n) { const b = $(id); b.style.display = n ? '' : 'none'; b.textContent = n; }
+function renderBadges() {
+  const applyPending = (S.mode === 'r1' && S.phase === 'apply') || (S.mode === 'r2' && !S.r2Applied);
+  setBadge('navBadge', applyPending ? RJ().length : 0);
+  setBadge('reviewBadge', S.mode === 'r1' && S.phase === 'review' ? 3 - Object.keys(decisions).length : 0);
+  setBadge('boardBadge', S.newApps.size);
+}
+function renderPersona() {
+  const me = S.mode === 'r1' || S.persona === 'me';
+  $('persona').innerHTML = me
+    ? `<b>我的求职</b><br>画像 v1 · 2027 届<br>后端 / 数据开发 · 日常实习<br><span style="display:flex;gap:12px;margin-top:6px"><a href="#" style="text-decoration:underline" onclick="toast('原型：将清空你的数据，回到首页重新开始');return false">重新开始</a><a href="#home" style="text-decoration:underline">回到首页</a></span>`
+    : `<b>${S.persona}</b> · 演示人物<br>计算机 · 大三 · 2027 届<br>后端 / 数据开发 · 日常实习<br><span style="display:flex;gap:12px;margin-top:6px"><a href="#" style="text-decoration:underline" onclick="resetDemo();return false">重置演示</a><a href="#home" style="text-decoration:underline">回到首页</a></span>`;
+  document.querySelectorAll('#protoSwitch button').forEach(b => b.classList.toggle('on', b.dataset.s === S.mode));
+}
+
+/* ---------- 总览（第 1 轮动态生成；第 2 轮使用页面中的静态内容） ---------- */
+function renderOverview() {
+  $('ov-r1').style.display = S.mode === 'r1' ? 'contents' : 'none';
+  $('ov-r2').style.display = S.mode === 'r2' ? 'contents' : 'none';
+  if (S.mode !== 'r1') return;
+  const steps = [['拉取岗位','上线 260 个'],['硬过滤','260 → 51'],['逐条匹配','分析 20 个'],['确认投递',''],['状态跟踪',''],['复盘',''],['更新策略','']];
+  const res = resultCount();
+  let done, now, nowEx, nowCls = 'now';
+  if (S.phase === 'generating') { done = S.genStep; now = S.genStep; nowEx = '进行中…'; nowCls = 'run'; }
+  if (S.phase === 'apply')    { done = 3; now = 3; nowEx = '等你确认'; steps[3][1] = ''; }
+  if (S.phase === 'tracking') { done = 4; now = 4; nowEx = `已有 ${res}/${apps.length} 个结果`; steps[3][1] = `已投递 ${S.applied} 个`; }
+  if (S.phase === 'review')   { done = 6; now = 6; nowEx = '等你确认'; steps[3][1] = `已投递 ${S.applied} 个`; steps[4][1] = `${res}/${apps.length} 有结果`; steps[5][1] = '3 条建议'; }
+  const stepper = steps.map(([lb, ex], i) => {
+    const cls = i < done ? 'done' : i === now ? nowCls : '';
+    const dot = i < done ? '✓' : i + 1;
+    const exText = i < done ? ex : i === now ? nowEx : '';
+    const link = i < steps.length - 1 ? `<div class="bar-link ${i < done ? 'done' : ''}"></div>` : '';
+    return `<div class="step ${cls}"><div class="dot">${dot}</div><div class="lb">${lb}</div><div class="ex">${exText}</div></div>${link}`;
+  }).join('');
+
+  let todo;
+  if (S.phase === 'generating') todo = '<p class="muted" style="line-height:1.8;padding:8px 0">Agent 正在生成第 1 轮推荐，大约需要 1–2 分钟。<br>你可以先离开，完成后会提醒你。</p>';
+  if (S.phase === 'apply') todo = `
+    <div class="todo"><div class="ic red">${RJ().length}</div><div class="tx"><b>确认第 1 轮推荐的 ${RJ().length} 个岗位</b><span>推荐 ${RJ().filter(j=>j.tier==='rec').length} 个 · 可以考虑 ${RJ().filter(j=>j.tier==='con').length} 个</span></div><a class="btn primary sm" href="#recommend">去确认</a></div>
+    <div class="todo"><div class="ic amb">!</div><div class="tx"><b>2 个推荐岗位 7 天内截止</b><span>星辰网络 · 3 天后；云杉数据 · 5 天后</span></div><a class="btn sm" href="#recommend">查看</a></div>`;
+  if (S.phase === 'tracking') todo = '<p class="muted" style="line-height:1.8;padding:8px 0">暂时没有需要你处理的事项。<br>Agent 正在跟踪投递结果，投递满 7 天（或已有 60% 结果）后会自动复盘。点右上角"推进时间"查看进展。</p>';
+  if (S.phase === 'review') todo = `
+    <div class="todo"><div class="ic red">${3 - Object.keys(decisions).length}</div><div class="tx"><b>第 1 轮复盘完成，有 3 条调整建议待处理</b><span>Agent 发现数据开发岗位大多卡在简历关</span></div><a class="btn primary sm" href="#review">去处理</a></div>`;
+
+  const list = appsVisible(), day = boardDay();
+  const states = list.map(a => appState(a, day));
+  const passResume = states.filter(s => s.evs.some(([, t]) => t.startsWith('简历通过'))).length;
+  const passExam = states.filter(s => s.evs.some(([, t]) => t.startsWith('笔试通过') || t.startsWith('面试'))).length;
+  const itv = states.filter(s => s.col === 'itv').length;
+  const kpi = (l, n, d) => `<div class="card kpi"><div class="l">${l}</div><div class="n">${n}</div><div class="d">${d}</div></div>`;
+  const kpis = list.length
+    ? kpi('累计投递', list.length, `第 1 轮 ${list.length} 个`) + kpi('通过简历关', passResume, `${list.length - states.filter(s=>s.col==='sent').length} 个已有回复`) + kpi('笔试 / 测评通过', passExam, '') + kpi('面试', itv, '')
+    : kpi('累计投递', 0, '确认投递后开始统计') + kpi('通过简历关', '—', '') + kpi('笔试 / 测评通过', '—', '') + kpi('面试', '—', '');
+
+  const feed = [];
+  feed.push([new Date(+R1_START + 1), '画像 v1 已确认，开始第 1 轮', '系统']);
+  if (S.phase !== 'generating') feed.push([new Date(+R1_START + 2), `第 1 轮推荐已生成，共 ${RJ().length} 个岗位`, '系统']);
+  if (S.applied) feed.push([new Date(+R1_START + 3), `确认投递 ${S.applied} 个岗位，跳过 ${S.skippedCount} 个`, '你']);
+  list.forEach(a => visibleEvents(a, day).slice(1).forEach(([d, t]) => feed.push([D(d), `${a.co} · ${a.t}：${t}`, colOfEvent(t)])));
+  if (S.phase === 'review') feed.push([new Date(+S.day + 3600000), 'Agent 完成第 1 轮复盘，提出 3 条调整建议', '复盘']);
+  feed.sort((x, y) => y[0] - x[0]);
+  const tagOf = k => ({ itv:'<span class="tag rec">面试</span>', exam:'<span class="tag con">笔试 / 测评</span>', rej:'<span class="tag plain">未通过</span>', none:'<span class="tag plain">无回应</span>', sent:'<span class="tag plain">进展</span>', '复盘':'<span class="tag ink">复盘</span>' })[k] || `<span class="tag plain">${k}</span>`;
+  const feedHtml = feed.slice(0, 6).map(([d, t, k]) => `<div class="feed-i"><span class="dt">${d.getMonth()+1}/${pad(d.getDate())}</span><span>${t}</span>${tagOf(k)}</div>`).join('');
+
+  $('ov-r1').innerHTML = `
+    <div class="card"><div class="card-h"><h3>第 1 轮进度</h3><span class="sub">策略 v1 · 开始于 3 月 3 日</span></div><div class="stepper">${stepper}</div></div>
+    <div class="grid2">
+      <div class="card"><div class="card-h"><h3>待你处理</h3><span class="sub">Agent 正在等待这些决定</span></div><div class="card-b" style="padding-top:6px">${todo}</div></div>
+      <div class="card"><div class="card-h"><h3>当前策略 v1</h3><span class="right muted" style="font-size:12px">来自你确认的偏好</span></div>
+        <div class="card-b" style="padding-top:8px">
+          <div class="strat-line"><span class="k">方向</span><span>首选 后端开发；可接受 数据开发</span></div>
+          <div class="strat-line"><span class="k">城市</span><span>首选 北京、上海；可接受 杭州</span></div>
+          <div class="strat-line"><span class="k">到岗</span><span>通常每周 3 天，最多 4 天</span></div>
+          <div class="strat-line"><span class="k">探索比例</span><span>20%</span></div>
+        </div></div>
+    </div>
+    <div class="kpis">${kpis}</div>
+    <div class="card"><div class="card-h"><h3>最近动态</h3><a class="right muted" style="font-size:12px;text-decoration:underline" href="#board">投递进度 ›</a></div>
+      <div class="card-b feed" style="padding-top:6px">${feedHtml}</div></div>`;
+}
+
+/* ---------- 推荐页 ---------- */
+function renderList() {
+  const st = RS();
+  const groups = [['rec','推荐（稳妥）'],['con','可以考虑（探索）']];
+  $('list').innerHTML = groups.map(([t, name]) =>
+    `<div class="group-title">${name}</div>` + RJ().filter(j => j.tier === t).map(j => `
+      <div class="item ${st.sel===j.id?'on':''} ${st.skipped.has(j.id)?'skipped':''}" data-id="${j.id}">
+        <input type="checkbox" ${st.checked.has(j.id)?'checked':''} data-ck="${j.id}">
+        <div>
+          <div class="t">${j.title}</div>
+          <div class="m">${j.co} · ${j.city}（${j.cityLv}） · ${j.pay}</div>
+          <div class="tags">${tierTag(j.tier)}${j.due?`<span class="tag due">${j.due}</span>`:''}${j.flag?`<span class="tag plain">${j.flag}</span>`:''}${st.skipped.has(j.id)?'<span class="tag plain">已跳过</span>':''}</div>
+        </div>
+      </div>`).join('')
+  ).join('');
+}
+function renderDetail() {
+  const st = RS();
+  const j = RJ().find(x => x.id === st.sel);
+  $('detail').innerHTML = `
+    <div class="d-head">
+      <div><h2>${j.title}</h2><div class="m">${j.co} · ${j.city} · ${j.type} · ${j.pay} · ${j.days}</div></div>
+      ${tierTag(j.tier)}
+    </div>
+    <div class="reason">${j.reason}</div>
+    <div class="sec"><h3>岗位要求逐条对照</h3>
+      ${j.reqs.map(([s,r,k,e]) => `<div class="req"><div class="ic ${s}">${icon[s]}</div><div>${r}<span class="kind">${k}项</span></div><div class="ev">${e}</div></div>`).join('')}
+    </div>
+    ${j.risk ? `<div class="sec"><h3>需要注意</h3><div class="risk">${j.risk}</div></div>` : ''}
+    <div class="d-actions">
+      <button class="link" onclick="toast('即将开放：将带上此岗位 JD 跳转到 ResumeIQ')">去 ResumeIQ 针对此岗位优化简历 ›</button>
+      <button class="btn" id="skipBtn">${st.skipped.has(j.id)?'取消跳过':'跳过'}</button>
+      <button class="btn primary" id="addBtn">${st.checked.has(j.id)?'已加入投递 ✓':'加入投递'}</button>
+    </div>
+    ${st.skipped.has(j.id) ? `
+    <div class="skipchat show">
+      <div class="bubble me">${st.notes[j.id] || '（没有说明原因）'}</div>
+      <div class="bubble agent">已跳过这个岗位。${st.notes[j.id] ? '你的说明已记下，本轮复盘时会参考，用来调整之后的推荐。' : ''}</div>
+    </div>` : `
+    <div class="skipchat" id="skipbox">
+      <div class="bubble agent">能说说为什么跳过这个岗位吗？你的说明会在复盘时帮助我调整之后的推荐。</div>
+      <div class="quick">${['不想去这个城市','对这家公司不感兴趣','方向不是我想要的','要求太高','薪资太低'].map(r => `<button class="chip" data-r="${r}">${r}</button>`).join('')}</div>
+      <div class="chat-input">
+        <input id="skipText" placeholder="说说原因，例如：这家公司我之前面过，体验不太好">
+        <button class="btn primary sm" id="skipSend">确认跳过</button>
+      </div>
+      <button class="link-undo" id="skipNoReason" style="font-size:12px;margin-top:8px">不说明，直接跳过</button>
+    </div>`}`;
+}
+function refreshRec() {
+  const box = $('rec-state'), area = $('recArea');
+  let stateHtml = '';
+  if (S.mode === 'r1' && S.phase === 'generating') stateHtml = '<div class="card state-card"><b>正在生成第 1 轮推荐</b>Agent 正在拉取岗位、过滤并逐条分析，大约需要 1–2 分钟。<br>你可以先离开，完成后会提醒你。</div>';
+  else if (S.mode === 'r1' && S.phase !== 'apply') stateHtml = `<div class="card state-card"><b>第 1 轮已投递 ${S.applied} 个 · 跳过 ${S.skippedCount} 个</b>投递结果会陆续出现在投递进度页。下一轮推荐会在复盘完成后生成。<br><a class="btn" href="#board">查看投递进度 ›</a></div>`;
+  else if (S.mode === 'r2' && S.r2Applied) stateHtml = `<div class="card state-card"><b>第 2 轮已投递 ${S.r2Applied} 个</b>第 2 轮之后的流程与第 1 轮相同。<br>想体验完整流程，可以点右上角"新用户 · 第 1 轮"。<br><a class="btn" href="#board">查看投递进度 ›</a></div>`;
+  box.style.display = stateHtml ? '' : 'none';
+  box.innerHTML = stateHtml;
+  area.style.display = stateHtml ? 'none' : '';
+  $('ask').style.display = (!stateHtml && S.mode === 'r2') ? '' : 'none';
+  $('bar-recommend').dataset.hide = stateHtml ? '1' : '';
+  if (stateHtml) return;
+  const f = FILTERED[S.mode];
+  $('foldBtn').textContent = f.label; $('filtered').innerHTML = f.html;
+  $('recSum').textContent = `推荐 ${RJ().filter(j=>j.tier==='rec').length} · 可以考虑 ${RJ().filter(j=>j.tier==='con').length}`;
+  renderList(); renderDetail();
+  const n = RS().checked.size;
+  $('submit').textContent = `确认投递 ${n} 个`;
+  $('submit').disabled = n === 0;
+  $('all').checked = n === RJ().length;
+}
+$('list').addEventListener('click', e => {
+  const st = RS(); const ck = e.target.dataset.ck;
+  if (ck) { const id = +ck; e.target.checked ? st.checked.add(id) : st.checked.delete(id); st.skipped.delete(id); refreshRec(); return; }
+  const it = e.target.closest('.item'); if (it) { st.sel = +it.dataset.id; refreshRec(); }
+});
+$('detail').addEventListener('click', e => {
+  const st = RS(); const id = st.sel;
+  if (e.target.id === 'addBtn') { st.checked.has(id) ? st.checked.delete(id) : st.checked.add(id); st.skipped.delete(id); refreshRec(); }
+  if (e.target.id === 'skipBtn') {
+    if (st.skipped.has(id)) { st.skipped.delete(id); delete st.notes[id]; refreshRec(); }
+    else { $('skipbox').classList.toggle('show'); const t = $('skipText'); if (t) t.focus(); }
+  }
+  if (e.target.dataset.r) {  // 快捷原因：填进输入框，可以继续补充
+    const t = $('skipText'); t.value = t.value ? `${t.value}；${e.target.dataset.r}` : e.target.dataset.r; t.focus();
+  }
+  if (e.target.id === 'skipSend' || e.target.id === 'skipNoReason') doSkip(id, e.target.id === 'skipSend' ? $('skipText').value.trim() : '');
+});
+$('detail').addEventListener('keydown', e => {
+  if (e.target.id === 'skipText' && e.key === 'Enter') doSkip(RS().sel, e.target.value.trim());
+});
+function doSkip(id, note) {
+  const st = RS();
+  st.skipped.add(id); st.checked.delete(id);
+  if (note) st.notes[id] = note;
+  refreshRec();
+  toast(note ? '已跳过，你的说明会在复盘时参考' : '已跳过');
+}
+$('all').addEventListener('change', e => {
+  const st = RS(); st.checked = e.target.checked ? new Set(RJ().map(j => j.id)) : new Set(); st.skipped.clear(); refreshRec();
+});
+const askOriginal = $('ask').innerHTML;
+function answer(msg) { $('ask').innerHTML = `<p>✓ ${msg}</p>`; }
+
+/* 确认投递：先弹确认框 */
+function confirmApply() {
+  const st = RS();
+  const picked = RJ().filter(j => st.checked.has(j.id));
+  const rec = picked.filter(j => j.tier === 'rec').length;
+  openModal(`确认投递 ${picked.length} 个岗位？`, `推荐 ${rec} 个、可以考虑 ${picked.length - rec} 个。<br>投递后不能撤回。`, '确认投递', () => {
+    if (S.mode === 'r1') {
+      S.applied = apps.length; S.skippedCount = jobsR1.length - apps.length; S.phase = 'tracking';  // 原型：投递结果固定使用预设的 15 个岗位
+      S.newApps = new Set(apps.map((a, i) => i));
+      toast(`已投递 ${apps.length} 个岗位（原型中固定使用预设的 15 个投递，另外 3 个视为跳过）`);
+    } else {
+      S.r2Applied = picked.length;
+      toast(`已投递 ${picked.length} 个岗位`);
+    }
+    go('board');
+  });
+}
+
+/* ---------- 投递进度 ---------- */
+let boardFilter = 'all';
+function renderBoard() {
+  $('boardTab2').style.display = S.mode === 'r1' ? 'none' : '';
+  const list = boardFilter === '2' ? [] : appsVisible();
+  const day = boardDay();
+  $('board').innerHTML = cols.map(([k, name]) => {
+    const items = list.map((a, i) => ({ a, i, s: appState(a, day) })).filter(x => x.s.col === k);
+    const empty = k === 'sent' ? (S.mode === 'r1' ? '确认第 1 轮投递后会出现在这里' : '第 2 轮确认投递后会出现在这里') : '暂无';
+    return `<div class="col"><div class="col-h">${name}<span class="c">${items.length}</span></div>
+      ${items.length ? items.map(({ a, i, s }) => `<div class="bcard" onclick="openApp(${i})">
+        <div class="t">${a.t}</div><div class="m">${a.co} · ${a.city}</div>
+        <div class="e">${s.last}</div><div class="tags">${S.newApps.has(i) ? '<span class="tag new">新</span>' : ''}${tierTag(a.tier)}<span class="tag plain">第 1 轮</span></div></div>`).join('') : `<div class="empty">${empty}</div>`}
+    </div>`;
+  }).join('');
+}
+$('boardTabs').addEventListener('click', e => {
+  if (!e.target.dataset.r) return;
+  document.querySelectorAll('#boardTabs button').forEach(b => b.classList.toggle('on', b === e.target));
+  boardFilter = e.target.dataset.r; renderBoard();
+});
+function openApp(i) {
+  const a = apps[i]; const s = appState(a, boardDay());
+  S.newApps.delete(i); renderBadges(); renderBoard();
+  const status = cols.find(c => c[0] === s.col)[1];
+  $('drawer').innerHTML = `
+    <button class="x" onclick="closeDrawer()">×</button>
+    <h2>${a.t}</h2>
+    <p class="muted" style="margin-top:6px">${a.co} · ${a.city} · 日常实习 · 第 1 轮投递</p>
+    <div style="display:flex;gap:8px;margin-top:12px">${tierTag(a.tier)}<span class="tag ink">${status}</span></div>
+    <div class="sec"><h3>进度</h3><div class="tl">
+      ${[...s.evs].reverse().map(([d, t, m], idx) => `<div class="tl-i ${idx === 0 ? '' : 'grey'}"><span class="p"></span><div><div class="d">${fmt(D(d))}</div><div class="txt">${t}</div>${m ? `<div class="msg">${m}</div>` : ''}</div></div>`).join('')}
+    </div></div>
+    <div class="sec"><h3>当时的推荐依据</h3><div class="reason" style="margin-top:0">${a.tier === 'rec' ? '必须项全部满足，属于"推荐"档。' : '有 1–2 项必须项部分满足，作为探索岗位放在"可以考虑"档。'}</div></div>
+`;
+  $('drawer').classList.add('on');
+  $('overlay').classList.add('on');
+}
+function closeDrawer() { $('drawer').classList.remove('on'); $('overlay').classList.remove('on'); }
+
+/* ---------- 推进时间 ---------- */
+function advance(n) {
+  if (!(S.mode === 'r1' && S.phase === 'tracking')) return;
+  const prev = S.day; S.day = addDays(prev, n);
+  const counts = { itv:0, exam:0, pass:0, rej:0, none:0 };
+  apps.forEach((a, i) => a.ev.forEach(([d, t]) => {
+    const dt = D(d);
+    if (dt > prev && dt <= S.day) {
+      S.newApps.add(i);
+      const c = colOfEvent(t);
+      if (t.startsWith('简历通过')) counts.pass++;
+      else if (c === 'itv' && t.includes('邀请')) counts.itv++;
+      else if (c === 'exam') counts.exam++;
+      else if (c === 'rej') counts.rej++;
+      else if (c === 'none') counts.none++;
+    }
+  }));
+  const parts = [];
+  if (counts.itv) parts.push(`${counts.itv} 个面试邀请`);
+  if (counts.pass) parts.push(`${counts.pass} 个简历通过`);
+  if (counts.exam) parts.push(`${counts.exam} 个笔试 / 测评进展`);
+  if (counts.rej) parts.push(`${counts.rej} 个未通过`);
+  if (counts.none) parts.push(`${counts.none} 个无回应`);
+  let msg = parts.length ? `过去 ${n} 天：${parts.join('、')}` : `过去 ${n} 天没有新消息`;
+  // 复盘条件：至少 5 个结果，且（60% 已有结果 或 投递满 7 天）；最晚投递满 10 天
+  const daysSince = Math.round((S.day - R1_START) / 86400000);
+  const results = resultCount();
+  if ((results >= 5 && (results / apps.length >= 0.6 || daysSince >= 7)) || daysSince >= 10) {
+    S.phase = 'review';
+    msg += '。第 1 轮复盘已完成，有 3 条调整建议待处理';
+  }
+  toast(msg);
+  renderAll();
+}
+
+/* ---------- 复盘页 ---------- */
+let decisions = {};
+const propButtons = {};  // 记住每张卡片原来的两个按钮，用于撤销
+function decide(btn, accept) {
+  const card = btn.closest('.prop'); const id = card.dataset.prop;
+  const box = card.querySelector('.prop-a');
+  if (!propButtons[id]) propButtons[id] = box.innerHTML;
+  const label = btn.textContent.trim();
+  decisions[id] = accept;
+  card.classList.toggle('accepted', accept); card.classList.toggle('rejected', !accept);
+  box.innerHTML = accept
+    ? `<button class="btn sm link-undo" onclick="undoDecide(this)">撤销</button><span class="done-chip yes">✓ 已${label}</span>`
+    : `<button class="btn sm link-undo" onclick="undoDecide(this)">撤销</button><span class="done-chip no">已选择：${label}</span>`;
+  updateReviewBar();
+}
+function undoDecide(btn) {
+  const card = btn.closest('.prop'); const id = card.dataset.prop;
+  delete decisions[id];
+  card.classList.remove('accepted', 'rejected');
+  card.querySelector('.prop-a').innerHTML = propButtons[id];
+  updateReviewBar();
+}
+function updateReviewBar() {
+  const left = 3 - Object.keys(decisions).length;
+  const acc = Object.values(decisions).filter(Boolean).length;
+  $('reviewNote').textContent = left > 0 ? `还有 ${left} 条建议未处理` : `已采纳 ${acc} 条，${3 - acc} 条未采纳`;
+  $('genBtn').disabled = left > 0;
+  $('genBtn').textContent = acc > 0 ? '生成策略 v2 并开始下一轮' : '沿用当前策略，开始下一轮';
+  renderTop(); renderBadges();
+}
+function resetReview() {
+  document.querySelectorAll('.prop').forEach(card => {
+    const id = card.dataset.prop;
+    if (propButtons[id]) card.querySelector('.prop-a').innerHTML = propButtons[id];
+    card.classList.remove('accepted', 'rejected');
+  });
+  decisions = {};
+}
+function setReviewDone() {  // 演示人物：第 1 轮复盘已处理（采纳 ①，② ③ 未采纳），只读
+  resetReview();
+  const cards = document.querySelectorAll('.prop');
+  decide(cards[0].querySelector('.btn.primary'), true);
+  decide(cards[1].querySelector('.btn:not(.primary)'), false);
+  decide(cards[2].querySelector('.btn:not(.primary)'), false);
+  document.querySelectorAll('.prop .link-undo').forEach(b => b.remove());
+}
+function renderReview() {
+  const ready = S.mode === 'r2' || S.phase === 'review';
+  $('rv-content').style.display = ready ? 'contents' : 'none';
+  $('rv-empty').style.display = ready ? 'none' : '';
+  if (!ready) {
+    const tip = S.applied ? `目前 ${resultCount()} / ${apps.length} 个投递已有结果。` : '确认投递并推进时间后，结果出来就会自动复盘。';
+    $('rv-empty').innerHTML = `<div class="card state-card"><b>第 1 轮还没有复盘</b>投递满 7 天，或 60% 的投递有了结果时（至少 5 个结果），Agent 会自动复盘。<br>${tip}</div>`;
+  }
+  $('rvNote').textContent = S.mode === 'r2'
+    ? '第 1 轮复盘已于 2026-03-10 处理完毕，结果已生成策略 v2。'
+    : `Agent 已于 ${fmt(S.day)} 完成第 1 轮复盘，请逐条处理下面的调整建议。`;
+  $('bar-review').dataset.hide = (S.mode === 'r1' && S.phase === 'review') ? '' : '1';
+}
+function finishReview() {
+  const acc = Object.values(decisions).filter(Boolean).length;
+  toast(acc ? '已生成策略 v2，第 2 轮推荐已生成' : '沿用当前策略，第 2 轮推荐已生成');
+  startR2(false, true);
+}
+
+/* ---------- 策略页 ---------- */
+function renderStrategy() {
+  const r1 = S.mode === 'r1';
+  $('stTitle').textContent = r1 ? '当前策略 v1' : '当前策略 v2';
+  $('stSub').textContent = r1 ? '第 1 轮正在使用' : '第 2 轮正在使用';
+  $('stRule').style.display = r1 ? 'none' : '';
+  $('verV2').style.display = r1 ? 'none' : '';
+  $('pfTitle').textContent = `画像 v${S.profileVer}`;
+  $('pfDate').textContent = S.profileVer > 1 ? '刚刚修改' : '3 月 3 日确认';
+}
+
+/* ---------- Agent 日志 ---------- */
+const logs = {
+  1: [
+    ['2026-03-03 10:00','code','开启第 1 轮','使用画像 v1、策略 v1','画像与偏好确认后自动开始。'],
+    ['2026-03-03 10:01','code','拉取岗位 · 硬过滤 · 粗筛','260 → 51 → 20','首轮上线岗位 260 个；硬过滤排除 209 个，粗筛再排除 31 个。'],
+    ['2026-03-03 10:03','llm','解析岗位要求 · 逐条匹配','20 个岗位','首轮没有缓存，全部调用大模型。'],
+    ['2026-03-03 10:03','code','判定档位','推荐 10 · 可以考虑 8 · 不推荐 2','档位由程序按规则判定，同样的输入结果一致。'],
+    ['2026-03-03 10:04','you','等待你确认','18 个推荐岗位','流程暂停，直到你确认投递。'],
+    ['2026-03-03 10:20','you','确认投递','投递 15 个，跳过 3 个','跳过原因：不想去这个城市 2（均为杭州）· 方向不对 1。'],
+    ['2026-03-03 至 03-10','code','状态跟踪','模拟时钟推进 7 天','收到 11 个结果，4 个仍在等待（结果出来后计入下一次复盘）。'],
+    ['2026-03-10 09:00','code','满足复盘条件','投递满 7 天，11 / 15 个已有结果','复盘条件：至少 5 个结果，且 60% 已有结果或投递满 7 天；最晚投递满 10 天。'],
+    ['2026-03-10 09:00','llm','复盘推理','调查 7 步，得出 4 条发现','① 看整体结果：15 投只有 6 个通过简历关 → ② 按推荐档位对比：可以考虑档 6 投过 1 → ③ 按方向对比：数据开发 5 投过 1 → ④ 阅读拒信：3 封提到缺少 Spark / Hive → ⑤ 对比岗位要求：被拒岗位都把 Spark / Hive 列为必须项 → ⑥ 检查证据：样本 5 个，刚好够 → ⑦ 查看跳过原因：2 个因为不想去杭州'],
+    ['2026-03-10 09:01','tool','提交调整建议','3 条建议','建议只写入"待确认"区域，不会直接修改策略。'],
+    ['2026-03-10 09:01','code','护栏检查','2 条被调整','建议 ③：探索比例 5% 低于下限，调整为 10%。建议 ②：涉及城市偏好，改为"需要你决定"。'],
+    ['2026-03-10 15:20','you','处理调整建议','采纳 1 条，2 条未采纳','生成策略 v2，第 2 轮使用。'],
+  ],
+  2: [
+    ['2026-03-10 15:21','code','开启第 2 轮','使用画像 v1、策略 v2','第 1 轮未投递的 3 个岗位保留为本轮候选。'],
+    ['2026-03-10 15:21','code','拉取岗位','新上线 64 个，候选池共 182 个','通过平台接口获取岗位（只包含公开信息，不含隐藏真相）。'],
+    ['2026-03-10 15:22','code','硬过滤','182 → 43','求职类型不符 41 · 城市不在范围 53 · 已过截止 21 · 届别不符 22 · 同公司本季已投满 2'],
+    ['2026-03-10 15:22','code','粗筛','43 → 20','按方向和技能重合度排序，取前 20 个进入大模型做逐条分析。'],
+    ['2026-03-10 15:23','llm','解析岗位要求','20 个岗位，其中 12 个命中缓存','把每个岗位的要求拆成"必须项 / 加分项"；已解析过的岗位直接使用缓存，不重复调用。'],
+    ['2026-03-10 15:24','llm','逐条匹配','20 个岗位，每条要求给出判断和简历依据','示例：星河科技 · 后端开发实习生 → 必须项 5/5 满足，加分项 1 满足、1 部分满足；依据引用"校园二手交易平台"等项目。'],
+    ['2026-03-10 15:24','code','判定档位','推荐 4 · 可以考虑 2 · 不推荐 14','不推荐原因：Spark / Hive 为必须项（策略 v2 新规则）6 · 其他必须项不满足 5 · 需每周 5 天 3。'],
+    ['2026-03-10 15:24','code','排序与配比','探索比例 20%，本轮 2 个探索岗位','同档排序：截止日期 > 部分满足数量 > 首选城市 > 加分项数量 > 发布时间。'],
+    ['2026-03-10 15:24','code','触发合并提问','"每周 4 天"影响 7 个岗位，达到提问条件（≥ 5）','同一约束每轮只问一次；你回答前，相关岗位最多放在"可以考虑"。'],
+    ['2026-03-10 15:25','you','等待你确认','6 个推荐岗位、1 个提问','流程暂停，直到你确认投递。'],
+  ],
+};
+let logTab = '2';
+function logRows(r) {
+  if (r === '2' || S.mode === 'r2') return logs[r];
+  const L = logs[1];
+  if (S.phase === 'generating') return L.slice(0, Math.min(S.genStep, 3) + 1).map((x, i) => i === Math.min(S.genStep, 3) ? [x[0], x[1], x[2] + '（进行中）', x[3], x[4]] : x);
+  if (S.phase === 'apply') return L.slice(0, 5);
+  const applyRow = ['2026-03-03 10:20', 'you', '确认投递', `投递 ${S.applied} 个，跳过 ${S.skippedCount} 个`, ''];
+  if (S.phase === 'tracking') {
+    const rows = [...L.slice(0, 5), applyRow];
+    if (S.day > R1_START) rows.push([`2026-03-03 至 ${fmt(S.day).slice(5)}`, 'code', '状态跟踪', `已有 ${resultCount()} / ${apps.length} 个投递有结果`, '']);
+    return rows;
+  }
+  return [...L.slice(0, 5), applyRow, ...L.slice(6, 11)];
+}
+const actorName = { code:'程序', llm:'大模型', tool:'工具', you:'你' };
+function renderLog() {
+  if (S.mode === 'r1') logTab = '1';
+  $('logTab2').style.display = S.mode === 'r1' ? 'none' : '';
+  document.querySelectorAll('#logTabs button').forEach(b => b.classList.toggle('on', b.dataset.r === logTab));
+  const rows = [...logRows(logTab)].reverse();  // 最新的在上面
+  $('logSum').innerHTML = `<span>步骤 <b>${rows.length}</b></span><span>大模型环节 <b>${rows.filter(x => x[1] === 'llm').length}</b></span>`;
+  $('logList').innerHTML = rows.map(([tm, a, ti, su, more]) => `
+    <div class="log-i" onclick="this.classList.toggle('open')">
+      <span class="tm">${tm}</span><span class="actor ${a}">${actorName[a]}</span>
+      <div><div class="ti">${ti}</div><div class="su">${su}</div></div>
+      ${more ? `<div class="more">${more}</div>` : ''}
+    </div>`).join('');
+}
+$('logTabs').addEventListener('click', e => {
+  if (!e.target.dataset.r) return;
+  logTab = e.target.dataset.r; renderLog();
+});
+
+/* ---------- 场景切换 ---------- */
+let genTimer;
+function startR1() {
+  clearInterval(genTimer);
+  Object.assign(S, { mode:'r1', phase:'generating', day:R1_START, genStep:0, applied:0, skippedCount:0, newApps:new Set(), persona:'me', profileVer:1 }); editMode = false;
+  REC.r1 = newRecState(jobsR1);
+  resetReview(); updateReviewBar();
+  boardFilter = 'all'; document.querySelectorAll('#boardTabs button').forEach(b => b.classList.toggle('on', b.dataset.r === 'all'));
+  go('overview');
+  genTimer = setInterval(() => {
+    S.genStep++;
+    if (S.genStep >= 3) {
+      clearInterval(genTimer);
+      S.phase = 'apply';
+      toast(`第 1 轮推荐已生成，共 ${jobsR1.length} 个岗位`);
+    }
+    renderAll();
+  }, 1300);
+}
+function startR2(fromSwitch, keepMe) {
+  clearInterval(genTimer);
+  Object.assign(S, { mode:'r2', phase:'apply', day:D('3/14'), genStep:3, newApps:new Set(), r2Applied:0, persona: keepMe ? 'me' : (S.persona === 'me' ? '小周' : S.persona) });
+  REC.r2 = newRecState(jobsR2);
+  $('ask').innerHTML = askOriginal;
+  setReviewDone();
+  boardFilter = 'all'; document.querySelectorAll('#boardTabs button').forEach(b => b.classList.toggle('on', b.dataset.r === 'all'));
+  logTab = '2';
+  go('overview');
+}
+function enterDemo(name) {
+  S.persona = name;
+  if (name !== '小周') toast(`原型中三位人物暂用同一套数据，正式版会为${name}准备独立数据`);
+  startR2(false, false);
+}
+function resetDemo() {
+  openModal('重置演示？', '将清除你在演示中的所有操作，恢复到初始状态。', '确认重置', () => { startR2(false, false); toast('已恢复到演示人物的初始状态'); });
+}
+
+/* ---------- 确认框 ---------- */
+function openModal(title, body, okText, onOk) {
+  let m = $('modal');
+  if (!m) { m = document.createElement('div'); m.id = 'modal'; m.className = 'modal-wrap'; document.body.appendChild(m); }
+  m.innerHTML = `<div class="modal"><h3>${title}</h3><p>${body}</p><div class="modal-a"><button class="btn" id="mCancel">再看看</button><button class="btn primary" id="mOk">${okText}</button></div></div>`;
+  m.classList.add('on');
+  $('mCancel').onclick = () => m.classList.remove('on');
+  $('mOk').onclick = () => { m.classList.remove('on'); onOk(); };
+}
+
+/* ---------- 上传与确认 ---------- */
+function pickFile(file) {
+  if (!file) return;
+  const err = $('uploadErr');
+  const ext = file.name.split('.').pop().toLowerCase();
+  if (ext === 'doc') { err.textContent = '暂不支持旧版 DOC 文件，请在 Word 中另存为 DOCX 或 PDF 后重新上传。'; return; }
+  if (!['pdf', 'docx'].includes(ext)) { err.textContent = '只支持 PDF、DOCX 格式的简历。'; return; }
+  if (file.size > 10 * 1024 * 1024) { err.textContent = '简历文件不能超过 10MB。'; return; }
+  if (!file.size) { err.textContent = '简历文件为空，请重新选择。'; return; }
+  err.textContent = '';
+  startParse(file.name);
+}
+const dropEl = $('drop');
+['dragenter', 'dragover'].forEach(t => dropEl.addEventListener(t, e => { e.preventDefault(); dropEl.classList.add('is-dragging'); }));
+['dragleave', 'drop'].forEach(t => dropEl.addEventListener(t, e => { e.preventDefault(); dropEl.classList.remove('is-dragging'); }));
+dropEl.addEventListener('drop', e => pickFile(e.dataTransfer.files[0]));
+function startParse(fileName) {
+  $('parseTitle').textContent = `正在读取：${fileName || '我的简历.pdf'}`;
+  $('drop').style.display = 'none';
+  $('parse').classList.add('show');
+  const steps = document.querySelectorAll('.pstep');
+  const results = ['约 1,800 字', '整理出 14 项信息', '4 项需确认，2 项待补充'];
+  steps.forEach((s, i) => {
+    setTimeout(() => s.classList.add('run'), i * 1100);
+    setTimeout(() => { s.classList.remove('run'); s.classList.add('ok'); s.querySelector('.s').textContent = '✓'; s.querySelector('em').textContent = results[i]; }, i * 1100 + 1000);
+  });
+  setTimeout(() => { $('toConfirm').disabled = false; }, steps.length * 1100);
+}
+let parsedDone = false;
+/* ---------- 修改画像与偏好 ---------- */
+let editMode = false;
+function editProfile() {
+  if (S.mode === 'r1' && S.phase === 'generating') { toast('正在生成推荐，请稍后再修改'); return; }
+  editMode = true;
+  // 修改模式：预填当前值，去掉步骤条
+  const [pay] = $('f-pay').querySelectorAll('input'); pay.value = 200;
+  const [d1, d2] = $('f-days').querySelectorAll('input'); d1.value = 3; d2.value = 4;
+  document.querySelectorAll('#e-confirm .src.ai, #e-confirm .src.miss').forEach(s => { s.className = 'src user'; s.textContent = '已确认'; });
+  ['f-pay', 'f-days'].forEach(id => $(id).classList.remove('err'));
+  go('confirm');
+}
+function applyConfirmMode() {
+  $('confirmSteps').style.display = editMode ? 'none' : '';
+  $('confirmTitle').textContent = editMode ? '修改画像与偏好' : '确认你的画像与求职偏好';
+  $('confirmLegend').innerHTML = editMode
+    ? `当前为画像 v${S.profileVer}。保存后生成画像 v${S.profileVer + 1}。`
+    : '已整理出 14 项信息，<b style="color:var(--warn-ink)">4 项需要你确认</b>，<b style="color:var(--gate)">2 项待补充</b>。';
+  $('confirmBack').setAttribute('href', editMode ? '#profile' : '#upload');
+  $('confirmBtn').textContent = editMode ? '保存修改' : '确认并开始第 1 轮 →';
+}
+function roundApplied() { return S.mode === 'r1' ? (S.phase === 'tracking' || S.phase === 'review') : !!S.r2Applied; }
+function saveEdit() {
+  const n = roundNo();
+  const nextVer = S.profileVer + 1;
+  if (roundApplied()) {
+    openModal('保存修改？', `第 ${n} 轮已经确认投递，此次修改将用于<b>第 ${n + 1} 轮</b>推荐，本轮不受影响。`, '保存', () => {
+      S.profileVer = nextVer; editMode = false;
+      toast(`已保存为画像 v${nextVer}，将用于第 ${n + 1} 轮推荐`);
+      go('profile');
+    });
+  } else {
+    openModal('保存修改？', `第 ${n} 轮还没有确认投递，保存后将用新的画像<b>重新生成第 ${n} 轮推荐</b>。<br>你在推荐页已做的勾选和跳过会被清空。`, '保存并重新生成', () => {
+      S.profileVer = nextVer; editMode = false;
+      REC[S.mode] = newRecState(RJ());
+      if (S.mode === 'r1') {
+        S.phase = 'generating'; S.genStep = 0;
+        go('overview');
+        genTimer = setInterval(() => {
+          S.genStep++;
+          if (S.genStep >= 3) { clearInterval(genTimer); S.phase = 'apply'; toast(`已用画像 v${nextVer} 重新生成第 1 轮推荐`); }
+          renderAll();
+        }, 1300);
+      } else {
+        toast(`已用画像 v${nextVer} 重新生成第 2 轮推荐`);
+        go('recommend');
+      }
+    });
+  }
+}
+function submitConfirm() {
+  let ok = true;
+  for (const id of ['f-pay', 'f-days']) {
+    const f = $(id);
+    const empty = [...f.querySelectorAll('input[type=number]')].some(i => !i.value);
+    f.classList.toggle('err', empty);
+    if (empty) { ok = false; f.querySelector('.why').textContent = '必填：请补充这一项'; }
+  }
+  if (!ok) { toast('还有必填项没有补充'); $('f-pay').scrollIntoView({ behavior:'smooth', block:'center' }); return; }
+  const extra = ($('extra1').value + $('extra2').value).trim();
+  if (extra && !parsedDone) {
+    parsedDone = true;
+    const p = $('parsed');
+    p.innerHTML = '已解析你补充的内容（只解析这里，不改动上面已确认的信息），请确认：<br>· 新增技能 <b>Spark（入门，来自你的补充）</b><br>· 新增偏好 <b>不考虑外包公司</b><br>确认无误后再次点击"确认并开始第 1 轮"。';
+    p.classList.add('show');
+    p.scrollIntoView({ behavior:'smooth', block:'center' });
+    toast('已解析补充内容，请确认');
+    return;
+  }
+  if (editMode) { saveEdit(); return; }
+  toast('校验通过，已保存画像 v1 与策略 v1，开始第 1 轮');
+  setTimeout(startR1, 700);
+}
+document.querySelectorAll('[data-seg]').forEach(g => g.addEventListener('click', e => {
+  if (e.target.tagName !== 'BUTTON') return;
+  g.querySelectorAll('button').forEach(b => b.classList.toggle('on', b === e.target));
+}));
+
+/* ---------- 页面切换 ---------- */
+const entryPages = ['home', 'upload', 'confirm'];
+const pageTitles = { overview:'总览', recommend:'推荐', board:'投递进度', review:'第 1 轮复盘', strategy:'策略', log:'Agent 日志', profile:'画像' };
+function renderAll() {
+  renderTop(); renderBadges(); renderPersona(); renderOverview();
+  refreshRec(); renderBoard(); renderReview(); renderStrategy(); renderLog();
+  $('bar-recommend').classList.toggle('on', currentPage === 'recommend' && !$('bar-recommend').dataset.hide);
+  $('bar-review').classList.toggle('on', currentPage === 'review' && !$('bar-review').dataset.hide);
+}
+function route() {
+  const key = currentPage;
+  closeDrawer();
+  const isEntry = entryPages.includes(key);
+  $('entry').classList.toggle('on', isEntry);
+  document.querySelector('.app').classList.toggle('off', isEntry);
+  $('protoSwitch').style.display = isEntry ? 'none' : '';
+  if (isEntry) {
+    document.querySelectorAll('.e-page').forEach(p => p.classList.toggle('on', p.id === 'e-' + key));
+    if (key === 'confirm') applyConfirmMode();
+    window.scrollTo(0, 0);
+    return;
+  }
+  const known = pageTitles[key];
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('on'));
+  $(known ? 'p-' + key : 'p-placeholder').classList.add('on');
+  document.querySelectorAll('.nav a[data-p]').forEach(a => a.classList.toggle('on', a.dataset.p === key));
+  $('pageTitle').textContent = key === 'recommend' ? `第 ${roundNo()} 轮推荐` : (known || '页面');
+  renderAll();
+  window.scrollTo(0, 0);
+}
+let currentPage = (location.hash || '#home').slice(1);
+function go(key) {
+  currentPage = key;
+  try { history.replaceState(null, '', '#' + key); } catch (e) {}
+  route();
+}
+document.addEventListener('click', e => {
+  const a = e.target.closest('a[href^="#"]');
+  if (!a) return;
+  const key = a.getAttribute('href').slice(1);
+  if (!key) return;
+  e.preventDefault();
+  go(key);
+});
+
+/* ---------- 通用 ---------- */
+let toastTimer;
+function toast(msg) {
+  const t = $('toast'); t.textContent = msg; t.classList.add('show');
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('show'), 3200);
+}
+
+setReviewDone();
+route();
+</script>
+</body>
+</html>

@@ -1,0 +1,36 @@
+{
+  "name": "jobagent",
+  "version": "0.1.0",
+  "private": true,
+  "description": "AI Agent 求职管家",
+  "scripts": {
+    "dev": "next dev --hostname 127.0.0.1 --port 3001",
+    "build": "next build",
+    "start": "next start --hostname 0.0.0.0",
+    "typecheck": "tsc --noEmit",
+    "test": "tsx --test tests/*.test.ts",
+    "db:init": "node --env-file-if-exists=.env.local scripts/db-init.mjs",
+    "db:release": "npm run db:init && npm run jobs:seed",
+    "jobs:generate": "node --env-file-if-exists=.env.local --import tsx scripts/generate-jobs.mts",
+    "jobs:seed": "node --env-file-if-exists=.env.local scripts/seed-jobs.mjs",
+    "sim:stats": "tsx scripts/sim-stats.mts",
+    "experiment": "node --env-file-if-exists=.env.local scripts/experiment.mjs"
+  },
+  "dependencies": {
+    "mammoth": "^1.12.3",
+    "mysql2": "^3.24.4",
+    "next": "^16.3.5",
+    "pdf-parse": "^2.4.5",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0",
+    "server-only": "^0.0.1",
+    "zod": "^4.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.2",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "tsx": "^4.23.13",
+    "typescript": "^7.0.2"
+  }
+}
